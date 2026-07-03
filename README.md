@@ -8,6 +8,84 @@ Chemometrics and Intelligent Laboratory Systems 85 (2007) 1-8.
 `spectrum_similarity.py` handles 1D spectra; `hsqc_similarity.py` extends the
 same method to 2D (HSQC and other processed 2D experiments).
 
+## Method
+
+Two spectra $x$ and $y$ are compared inside a common chemical-shift window. Each
+processed point $p$ has a chemical shift $\delta(p)$ and an intensity $I_a(p)$
+($a \in \{x, y\}$). With the default `clip` baseline, negative intensities are
+zeroed first, $I_a(p) \leftarrow \max(I_a(p), 0)$.
+
+Every point carries a weight $w(p)$ equal to its local integration element, so
+spectra of different digital resolution integrate consistently:
+
+$$
+w_{\text{1D}}(p) = \lvert \Delta\delta(p) \rvert,
+\qquad
+w_{\text{2D}}(p) = \lvert \Delta\delta_{F1}(p)\rvert \cdot \lvert \Delta\delta_{F2}(p)\rvert .
+$$
+
+**Binning.** At resolution $n$ the window is split into equal bins. In 1D, a
+window $[\delta_\text{lo}, \delta_\text{hi}]$ of width $W = \delta_\text{hi} -
+\delta_\text{lo}$ gives $n$ bins with edges $e_k = \delta_\text{lo} + kW/n$
+($k = 0,\dots,n$). In 2D the same is done independently along $F2$ and $F1$,
+producing an $n \times n$ grid. The raw integral of bin $k$ and its
+normalization to a target integral $N_a$ (`--norm-x` / `--norm-y`, default $1$):
+
+$$
+A^{a}_{k}(n) = \sum_{p \,:\, \delta(p) \in \text{bin } k} I_a(p)\, w(p),
+\qquad
+b^{a}_{k}(n) = N_a \, \frac{A^{a}_{k}(n)}{\sum_{k'} A^{a}_{k'}(n)},
+\qquad
+\sum_{k} b^{a}_{k}(n) = N_a .
+$$
+
+**Similarity index.** Each resolution yields a weighted Jaccard (Ruzicka) index,
+clamped to $[0, 1]$:
+
+$$
+\mathrm{SI}_n
+= \frac{\sum_{k} \min\!\big(b^{x}_{k}, b^{y}_{k}\big)}
+       {N_x + N_y - \sum_{k} \min\!\big(b^{x}_{k}, b^{y}_{k}\big)}
+= \frac{\sum_{k} \min\!\big(b^{x}_{k}, b^{y}_{k}\big)}
+       {\sum_{k} \max\!\big(b^{x}_{k}, b^{y}_{k}\big)},
+$$
+
+using $\sum_k \min + \sum_k \max = N_x + N_y$. In 2D the sums run over grid bins
+$(i, j)$ with $b^{a}_{ij}(n)$ replacing $b^{a}_{k}(n)$.
+
+The resolution runs $n = 1, \dots, N_\text{bins}$, where the finest bins are
+bounded by the minimum bin width $w_\text{min}$:
+
+$$
+N_\text{bins}^{\text{1D}} = \left\lfloor \frac{W}{w_\text{min}} \right\rfloor,
+\qquad
+N_\text{bins}^{\text{2D}} = \min\!\left(
+  \left\lfloor \frac{W_{F2}}{w_{\min,F2}} \right\rfloor,\;
+  \left\lfloor \frac{W_{F1}}{w_{\min,F1}} \right\rfloor
+\right).
+$$
+
+**Upper envelope.** At $n = 1$ every pair of normalized spectra collapses to a
+single bin, so $\mathrm{SI}_1 = 1$ is uninformative; the envelope $\mathrm{SI}^{*}_n$
+smooths the descending $\mathrm{SI}_n$ curve. Anchors are chosen greedily: set
+$\mathrm{SI}^{*}_1 = 1$; given an anchor at position $m$, the next anchor is the
+largest index $j > m$ that attains $\max_{k > m} \mathrm{SI}_k$. Between
+consecutive anchors $\mathrm{SI}^{*}_n$ is linear in $n$, and finally
+$\mathrm{SI}^{*}_n = \max(\text{interpolation}, \mathrm{SI}_n)$ so that
+$\mathrm{SI}^{*}_n \ge \mathrm{SI}_n$ everywhere.
+
+**Score.** The reported similarity is the mean of the envelope over all
+resolutions:
+
+$$
+S = \frac{1}{N_\text{bins}} \sum_{n=1}^{N_\text{bins}} \mathrm{SI}^{*}_n
+\;\in\; [0, 1].
+$$
+
+Identical spectra give $\mathrm{SI}_n = 1$ for every $n$, hence $S = 1$. Because
+$S$ depends on $N_\text{bins}$, only compare scores computed with the same
+minimum bin width.
+
 ## 1D
 
 The input is a processed Bruker 1D spectrum. Pass either an experiment directory,
