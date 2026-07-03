@@ -187,8 +187,8 @@ def bin_integrals_2d(
 def hsqc_similarity(
     spectrum_x: Spectrum2D,
     spectrum_y: Spectrum2D,
-    min_bin_width_f2: float = 0.4,
-    min_bin_width_f1: float = 4.0,
+    min_bin_width_f2: float = 0.1,
+    min_bin_width_f1: float = 1.0,
     range_f2: tuple[float, float] | None = None,
     range_f1: tuple[float, float] | None = None,
     norm_x: float = 1.0,
@@ -339,8 +339,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("spectrum_x", help="Bruker experiment directory, pdata directory, or 2rr file")
     parser.add_argument("spectrum_y", help="Bruker experiment directory, pdata directory, or 2rr file")
     parser.add_argument("--procno", type=int, default=None, help="Processed spectrum number under pdata")
-    parser.add_argument("--min-bin-width-f2", type=float, default=0.4, help="Smallest F2 bin width in ppm")
-    parser.add_argument("--min-bin-width-f1", type=float, default=4.0, help="Smallest F1 bin width in ppm")
+    parser.add_argument("--min-bin-width-f2", type=float, default=0.1, help="Smallest F2 bin width in ppm")
+    parser.add_argument("--min-bin-width-f1", type=float, default=1.0, help="Smallest F1 bin width in ppm")
     parser.add_argument("--f2-min", type=float, default=None, help="Lower F2 ppm limit")
     parser.add_argument("--f2-max", type=float, default=None, help="Upper F2 ppm limit")
     parser.add_argument("--f1-min", type=float, default=None, help="Lower F1 ppm limit")

@@ -51,7 +51,7 @@ its `SI*_n` envelope are averaged into one score in `[0, 1]`.
 ```bash
 python3 hsqc_similarity.py /path/to/exp1 /path/to/exp2
 python3 hsqc_similarity.py exp1 exp2 --f2-min 0 --f2-max 10 --f1-min 0 --f1-max 160
-python3 hsqc_similarity.py exp1 exp2 --min-bin-width-f2 0.4 --min-bin-width-f1 4.0
+python3 hsqc_similarity.py exp1 exp2 --min-bin-width-f2 0.1 --min-bin-width-f1 1.0
 python3 hsqc_similarity.py exp1 exp2 --plot result.png
 python3 hsqc_similarity.py exp1 exp2 --json
 ```
@@ -74,9 +74,12 @@ ppm axes.
 
 Defaults:
 
-- `--min-bin-width-f2 0.4`: the 1H value recommended in the paper.
-- `--min-bin-width-f1 4.0`: a wider bin for the 13C/15N axis, whose ppm range is
-  roughly ten times larger.
+- `--min-bin-width-f2 0.1`: near the 1H peak linewidth, fine enough to resolve
+  small chemical-shift changes without dropping below the digital resolution.
+- `--min-bin-width-f1 1.0`: the matching value for the 13C/15N axis, whose ppm
+  range is roughly ten times larger. Reduce both together for more discrimination
+  between clearly different spectra; the absolute score drops as bins shrink, so
+  only compare scores taken at the same bin widths.
 - If no ppm range is supplied for a dimension, the common overlap of the two
   spectra is used in that dimension.
 
