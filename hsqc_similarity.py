@@ -137,11 +137,29 @@ class PreparedSpectrum2D:
     weight: np.ndarray  # intensity * area of each point
 
 
+def _gaussian_kernel(sigma_points: float) -> np.ndarray | None:
+    if sigma_points <= 0:
+        return None
+    radius = max(1, int(round(3.0 * sigma_points)))
+    x = np.arange(-radius, radius + 1, dtype=np.float64)
+    kernel = np.exp(-0.5 * (x / sigma_points) ** 2)
+    kernel /= kernel.sum()
+    return kernel
+
+
+def _smooth_axis(matrix: np.ndarray, kernel: np.ndarray, axis: int) -> np.ndarray:
+    return np.apply_along_axis(
+        lambda row: np.convolve(row, kernel, mode="same"), axis, matrix
+    )
+
+
 def prepare_spectrum_2d(
     spectrum: Spectrum2D,
     range_f2: tuple[float, float],
     range_f1: tuple[float, float],
     baseline: str = "clip",
+    smooth_f2: float = 0.0,
+    smooth_f1: float = 0.0,
 ) -> PreparedSpectrum2D:
     intensity = spectrum.intensity.astype(np.float64, copy=True)
     if baseline == "clip":
@@ -165,6 +183,20 @@ def prepare_spectrum_2d(
     area = np.outer(_axis_spacing(ppm_f1), _axis_spacing(ppm_f2))
     weight = sub * area
 
+    # Optional Gaussian shift-tolerance smoothing (Castillo 2013 shift-insensitivity,
+    # applied here in the binning framework). Sigma is given in ppm and converted to
+    # points using the median grid spacing along each axis.
+    if smooth_f2 > 0 and ppm_f2.size > 1:
+        step_f2 = float(np.median(_axis_spacing(ppm_f2)))
+        kernel = _gaussian_kernel(smooth_f2 / step_f2)
+        if kernel is not None:
+            weight = _smooth_axis(weight, kernel, axis=1)
+    if smooth_f1 > 0 and ppm_f1.size > 1:
+        step_f1 = float(np.median(_axis_spacing(ppm_f1)))
+        kernel = _gaussian_kernel(smooth_f1 / step_f1)
+        if kernel is not None:
+            weight = _smooth_axis(weight, kernel, axis=0)
+
     grid_f2, grid_f1 = np.meshgrid(ppm_f2, ppm_f1)
     return PreparedSpectrum2D(
         f2=grid_f2.ravel(),
@@ -184,6 +216,42 @@ def bin_integrals_2d(
     return hist
 
 
+def _rotated_unit_coords(
+    prep: PreparedSpectrum2D,
+    range_f2: tuple[float, float],
+    range_f1: tuple[float, float],
+    rotate_deg: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Map ppm points to a unit square (stretch so both axes span [0, 1]) and rotate
+    about its centre. Rotating so bin edges cross the 1H-13C correlation diagonal
+    obliquely reduces the chance that a small shift moves a peak into another bin
+    (Bodis et al., Talanta 79 (2009) 1379, who rotate HSQC spectra by 45 degrees)."""
+    lo2, hi2 = sorted(range_f2)
+    lo1, hi1 = sorted(range_f1)
+    u = (prep.f2 - lo2) / (hi2 - lo2)
+    v = (prep.f1 - lo1) / (hi1 - lo1)
+    if rotate_deg == 0.0:
+        return u, v
+    theta = math.radians(rotate_deg)
+    cos_t, sin_t = math.cos(theta), math.sin(theta)
+    cu, cv = u - 0.5, v - 0.5
+    return cu * cos_t - cv * sin_t + 0.5, cu * sin_t + cv * cos_t + 0.5
+
+
+def _rotated_bbox(rotate_deg: float) -> tuple[float, float]:
+    """Bounding-box half-extent of the unit square after rotation about its centre."""
+    if rotate_deg == 0.0:
+        return 0.0, 1.0
+    theta = math.radians(rotate_deg)
+    corners = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+    xs, ys = [], []
+    for u, v in corners:
+        cu, cv = u - 0.5, v - 0.5
+        xs.append(cu * math.cos(theta) - cv * math.sin(theta) + 0.5)
+        ys.append(cu * math.sin(theta) + cv * math.cos(theta) + 0.5)
+    return min(xs + ys), max(xs + ys)
+
+
 def hsqc_similarity(
     spectrum_x: Spectrum2D,
     spectrum_y: Spectrum2D,
@@ -194,34 +262,43 @@ def hsqc_similarity(
     norm_x: float = 1.0,
     norm_y: float = 1.0,
     baseline: str = "clip",
+    rotate_deg: float = 0.0,
+    smooth_f2: float = 0.0,
+    smooth_f1: float = 0.0,
 ) -> dict[str, object]:
     range_f2 = _overlap_range(spectrum_x.ppm_f2, spectrum_y.ppm_f2, range_f2, "F2")
     range_f1 = _overlap_range(spectrum_x.ppm_f1, spectrum_y.ppm_f1, range_f1, "F1")
 
-    prep_x = prepare_spectrum_2d(spectrum_x, range_f2, range_f1, baseline=baseline)
-    prep_y = prepare_spectrum_2d(spectrum_y, range_f2, range_f1, baseline=baseline)
+    prep_x = prepare_spectrum_2d(
+        spectrum_x, range_f2, range_f1, baseline=baseline, smooth_f2=smooth_f2, smooth_f1=smooth_f1
+    )
+    prep_y = prepare_spectrum_2d(
+        spectrum_y, range_f2, range_f1, baseline=baseline, smooth_f2=smooth_f2, smooth_f1=smooth_f1
+    )
     total_x = float(prep_x.weight.sum())
     total_y = float(prep_y.weight.sum())
     if total_x <= 0 or total_y <= 0:
         raise ValueError("Both spectra must have positive integrated intensity after preprocessing")
-    prep_x = PreparedSpectrum2D(prep_x.f2, prep_x.f1, prep_x.weight * (norm_x / total_x))
-    prep_y = PreparedSpectrum2D(prep_y.f2, prep_y.f1, prep_y.weight * (norm_y / total_y))
+    wx = prep_x.weight * (norm_x / total_x)
+    wy = prep_y.weight * (norm_y / total_y)
+
+    # Map both spectra to the same (optionally rotated) unit-square frame and bin there.
+    ux, vx = _rotated_unit_coords(prep_x, range_f2, range_f1, rotate_deg)
+    uy, vy = _rotated_unit_coords(prep_y, range_f2, range_f1, rotate_deg)
+    box_lo, box_hi = _rotated_bbox(rotate_deg)
 
     lo2, hi2 = sorted(range_f2)
     lo1, hi1 = sorted(range_f1)
-    width_f2 = hi2 - lo2
-    width_f1 = hi1 - lo1
     max_n = min(
-        max(1, int(math.floor(width_f2 / min_bin_width_f2))),
-        max(1, int(math.floor(width_f1 / min_bin_width_f1))),
+        max(1, int(math.floor((hi2 - lo2) / min_bin_width_f2))),
+        max(1, int(math.floor((hi1 - lo1) / min_bin_width_f1))),
     )
 
     si = np.empty(max_n, dtype=np.float64)
     for n in range(1, max_n + 1):
-        edges_f2 = np.linspace(lo2, hi2, n + 1)
-        edges_f1 = np.linspace(lo1, hi1, n + 1)
-        bx = bin_integrals_2d(prep_x, edges_f2, edges_f1)
-        by = bin_integrals_2d(prep_y, edges_f2, edges_f1)
+        edges = np.linspace(box_lo, box_hi, n + 1)
+        bx, _, _ = np.histogram2d(vx, ux, bins=(edges, edges), weights=wx)
+        by, _, _ = np.histogram2d(vy, uy, bins=(edges, edges), weights=wy)
         overlap = float(np.minimum(bx, by).sum())
         denominator = norm_x + norm_y - overlap
         value = overlap / denominator if denominator > 0 else 0.0
@@ -235,6 +312,9 @@ def hsqc_similarity(
         "range_f1": [float(lo1), float(hi1)],
         "min_bin_width_f2": float(min_bin_width_f2),
         "min_bin_width_f1": float(min_bin_width_f1),
+        "rotate_deg": float(rotate_deg),
+        "smooth_f2": float(smooth_f2),
+        "smooth_f1": float(smooth_f1),
         "si": si.tolist(),
         "si_star": si_star.tolist(),
         "source_x": str(spectrum_x.source),
@@ -348,6 +428,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--norm-x", type=float, default=1.0, help="Target integral for first spectrum")
     parser.add_argument("--norm-y", type=float, default=1.0, help="Target integral for second spectrum")
     parser.add_argument(
+        "--rotate",
+        type=float,
+        default=0.0,
+        help="Rotate the binning grid by this angle in degrees (Bodis 2009 uses 45 for 1H-13C HSQC)",
+    )
+    parser.add_argument(
+        "--smooth-f2", type=float, default=0.0, help="Gaussian shift-tolerance sigma along F2 in ppm"
+    )
+    parser.add_argument(
+        "--smooth-f1", type=float, default=0.0, help="Gaussian shift-tolerance sigma along F1 in ppm"
+    )
+    parser.add_argument(
         "--baseline",
         choices=["clip", "shift", "none"],
         default="clip",
@@ -392,6 +484,9 @@ def main(argv: Iterable[str] | None = None) -> int:
         norm_x=args.norm_x,
         norm_y=args.norm_y,
         baseline=args.baseline,
+        rotate_deg=args.rotate,
+        smooth_f2=args.smooth_f2,
+        smooth_f1=args.smooth_f1,
     )
     if args.json:
         print(json.dumps(result, indent=2))

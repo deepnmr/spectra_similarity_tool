@@ -33,6 +33,23 @@ def test_identical_2d_spectra_have_similarity_one():
     assert result["similarity"] == 1.0
 
 
+def test_rotation_preserves_identity_and_ordering():
+    reference = make_spectrum([(3.0, 40.0, 0.1, 1.5, 1.0), (7.0, 120.0, 0.1, 1.5, 0.8)], "ref")
+    shifted = make_spectrum([(3.1, 41.0, 0.1, 1.5, 1.0), (7.1, 121.0, 0.1, 1.5, 0.8)], "shifted")
+    unrelated = make_spectrum([(5.0, 80.0, 0.1, 1.5, 1.0), (1.0, 20.0, 0.1, 1.5, 0.8)], "unrelated")
+
+    assert hsqc_similarity(reference, reference, rotate_deg=45)["similarity"] == 1.0
+    shifted_score = hsqc_similarity(reference, shifted, rotate_deg=45)["similarity"]
+    unrelated_score = hsqc_similarity(reference, unrelated, rotate_deg=45)["similarity"]
+    assert shifted_score > unrelated_score
+
+
+def test_smoothing_preserves_identity():
+    spectrum = make_spectrum([(3.0, 40.0, 0.1, 1.5, 1.0), (7.0, 120.0, 0.1, 1.5, 0.8)], "synthetic")
+    result = hsqc_similarity(spectrum, spectrum, smooth_f2=0.05, smooth_f1=0.5)
+    assert result["similarity"] == 1.0
+
+
 def test_related_2d_spectrum_scores_higher_than_unrelated():
     reference = make_spectrum([(3.0, 40.0, 0.1, 1.5, 1.0), (7.0, 120.0, 0.1, 1.5, 0.8)], "ref")
     shifted = make_spectrum([(3.1, 41.0, 0.1, 1.5, 1.0), (7.1, 121.0, 0.1, 1.5, 0.8)], "shifted")

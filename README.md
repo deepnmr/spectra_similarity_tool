@@ -130,6 +130,8 @@ its `SI*_n` envelope are averaged into one score in `[0, 1]`.
 python3 hsqc_similarity.py /path/to/exp1 /path/to/exp2
 python3 hsqc_similarity.py exp1 exp2 --f2-min 0 --f2-max 10 --f1-min 0 --f1-max 160
 python3 hsqc_similarity.py exp1 exp2 --min-bin-width-f2 0.1 --min-bin-width-f1 1.0
+python3 hsqc_similarity.py exp1 exp2 --rotate 45                 # 1H-13C HSQC
+python3 hsqc_similarity.py exp1 exp2 --smooth-f2 0.05 --smooth-f1 0.5
 python3 hsqc_similarity.py exp1 exp2 --plot result.png
 python3 hsqc_similarity.py exp1 exp2 --json
 ```
@@ -160,6 +162,46 @@ Defaults:
   only compare scores taken at the same bin widths.
 - If no ppm range is supplied for a dimension, the common overlap of the two
   spectra is used in that dimension.
+
+### Optional refinements (from the literature)
+
+The core `SI_n` binning above is the exact 2D method of Bodis et al. (2009). Two
+paper-grounded options are available and default to **off**, because on protein
+`1H-15N` amide HSQC (peaks scattered, no `1H-13C` correlation) they do not help;
+they are intended for small-molecule `1H-13C` HSQC.
+
+- `--rotate 45` rotates the binning grid. Bodis et al. (2009) rotate `1H-13C`
+  HSQC spectra by 45° so the square bins cross the CH<sub>n</sub> correlation
+  diagonal obliquely, which makes a small chemical-shift change less likely to
+  move a peak into a neighbouring bin. For `1H-13C` HSQC this improved
+  discrimination in the paper; on `1H-15N` data it mainly coarsens the grid.
+- `--smooth-f2` / `--smooth-f1` apply a Gaussian shift tolerance (sigma in ppm)
+  before binning, a lightweight version of the shift-insensitivity that Castillo
+  et al. (2013) build into their tree representation. It raises the score of
+  near-matches but also blurs genuine differences.
+
+On the test data (base `1H-15N` HSQC vs the same-protein ligand titration and a
+different protein), the plain binning gave the widest separation between
+same-protein and different-protein spectra; rotation and smoothing narrowed it.
+Both options preserve a self-similarity of exactly 1.
+
+## References
+
+1. L. Bodis, A. Ross, E. Pretsch, *A novel spectra similarity measure*,
+   Chemometrics and Intelligent Laboratory Systems 85 (2007) 1-8. — the 1D
+   bin method.
+2. L. Bodis, A. Ross, J. Bodis, E. Pretsch, *Automatic compatibility tests of
+   HSQC NMR spectra with proposed structures of chemical compounds*, Talanta 79
+   (2009) 1379-1386. — the 2D (`n × n` bin) extension implemented here,
+   including the 45° rotation.
+3. A.M. Castillo, L. Uribe, L. Patiny, J. Wist, *Fast and shift-insensitive
+   similarity comparisons of NMR using a tree-representation of spectra*,
+   Chemometrics and Intelligent Laboratory Systems 127 (2013) 1-6. — the
+   shift-insensitive node similarity that motivates the smoothing option.
+4. G.K. Pierens, S. Brossi, Z. Yang, D.C. Reutens, V. Vegh, *HSQC spectral based
+   similarity matching of compounds using nearest neighbours and a fast discrete
+   genetic algorithm*, Journal of Cheminformatics 4 (2012) 25. — a complementary
+   peak-list matching approach (not bin-based).
 
 ## Bruker assumptions
 
