@@ -6,7 +6,10 @@ Lorant Bodis, Alfred Ross, Erno Pretsch, "A novel spectra similarity measure",
 Chemometrics and Intelligent Laboratory Systems 85 (2007) 1-8.
 
 `spectrum_similarity.py` handles 1D spectra; `hsqc_similarity.py` extends the
-same method to 2D (HSQC and other processed 2D experiments).
+same method to 2D (HSQC and other processed 2D experiments). `hsqc_methods.py`
+adds two alternative literature methods (a Castillo-style quad-tree and a
+Pierens-style nearest-neighbour peak matcher) so they can be compared on the
+same data.
 
 ## Method
 
@@ -184,6 +187,45 @@ On the test data (base `1H-15N` HSQC vs the same-protein ligand titration and a
 different protein), the plain binning gave the widest separation between
 same-protein and different-protein spectra; rotation and smoothing narrowed it.
 Both options preserve a self-similarity of exactly 1.
+
+## Other methods and how they compare
+
+`hsqc_methods.py` implements two other published HSQC similarity approaches:
+
+```bash
+python3 hsqc_methods.py exp1 exp2 --method quadtree   # Castillo et al. 2013
+python3 hsqc_methods.py exp1 exp2 --method nn         # Pierens et al. 2012
+```
+
+- **Quad-tree (Castillo 2013)** recursively splits each spectrum at its centre of
+  mass into a quad-tree, then compares the trees node-by-node with a similarity
+  that blends an intensity ratio and a shift-tolerant term
+  `alpha·min/max + (1-alpha)·exp(-gamma·d)`. The raw score is not 1 for identical
+  spectra, so it is normalized as `s(x,y)/sqrt(s(x,x)·s(y,y))`.
+- **Nearest-neighbour peaks (Pierens 2012)** picks peaks from both spectra,
+  matches each to its nearest neighbour in the other, and maps the average
+  peak-to-peak distance `d` to `1/(1+d)`.
+
+All three methods give a self-similarity of exactly 1. On the test data — a base
+`1H-15N` HSQC compared with the same protein plus ligand (should score high) and
+a *different* protein (should score low) — they separate the two cases very
+differently:
+
+| method | self | same protein | different protein | separation |
+| --- | --- | --- | --- | --- |
+| Bin (Bodis 2009) | 1.00 | 0.82 | 0.50 | **0.32** |
+| Bin + 45° rotation | 1.00 | 0.86 | 0.57 | 0.29 |
+| Quad-tree (Castillo 2013) | 1.00 | 0.92 | 0.87 | 0.05 |
+| Nearest-neighbour (Pierens 2012) | 1.00 | 0.99 | 0.96 | 0.03 |
+
+The bin method separates same-protein from different-protein spectra far better
+here. The quad-tree and nearest-neighbour methods were designed for **sparse
+small-molecule `1H-13C` HSQC** and for **shift insensitivity**: with the dense
+`1H-15N` amide fingerprint (150+ peaks filling one crowded region) every spectrum
+has a near neighbour for every peak and similar mass-centre structure, so both
+saturate near 1 and barely discriminate. Method choice should follow the regime:
+bins for dense protein fingerprints, tree/nearest-neighbour for sparse
+small-molecule spectra where shift tolerance matters.
 
 ## References
 
