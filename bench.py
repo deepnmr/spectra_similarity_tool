@@ -52,8 +52,10 @@ def run(prl3: Path, oaa: Path) -> dict:
         same_scores = {f"2v{e}": fn(ref, same[e]) for e in SAME}
         diff_s = fn(ref, diff)
         mean_same = sum(same_scores.values()) / len(same_scores)
+        min_same = min(same_scores.values())
         rows[name] = {"self": self_s, **same_scores, "2vOAA": diff_s,
-                      "mean_same": mean_same, "separation": mean_same - diff_s}
+                      "mean_same": mean_same, "min_same": min_same,
+                      "separation": mean_same - diff_s, "margin": min_same - diff_s}
         sep[name] = mean_same - diff_s
     return {"rows": rows, "separation": sep}
 
@@ -71,7 +73,7 @@ def main() -> int:
         return 0
 
     rows = result["rows"]
-    cols = ["self", "2v4", "2v6", "2v8", "2v10", "2v12", "2v14", "2vOAA", "separation"]
+    cols = ["self", "2v4", "2v6", "2v8", "2v10", "2v12", "2v14", "2vOAA", "separation", "margin"]
     print(f"{'method':18} " + " ".join(f"{c:>8}" for c in cols))
     # rank by separation, best first
     for name in sorted(rows, key=lambda n: -rows[n]["separation"]):
