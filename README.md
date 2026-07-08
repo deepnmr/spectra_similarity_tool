@@ -9,7 +9,10 @@ Chemometrics and Intelligent Laboratory Systems 85 (2007) 1-8.
 same method to 2D (HSQC and other processed 2D experiments). `hsqc_methods.py`
 adds two alternative literature methods (a Castillo-style quad-tree and a
 Pierens-style nearest-neighbour peak matcher) so they can be compared on the
-same data.
+same data. `hsqc_lcc.py` adds the **Lineshape Correlation Coefficient (LCC)**, a
+method synthesized from all three that discriminates dense protein `1H-15N` HSQC
+fingerprints ~2.6× better than the previous best (see
+[Other methods](#other-methods-and-how-they-compare)).
 
 ## Method
 
@@ -206,26 +209,55 @@ python3 hsqc_methods.py exp1 exp2 --method nn         # Pierens et al. 2012
   matches each to its nearest neighbour in the other, and maps the average
   peak-to-peak distance `d` to `1/(1+d)`.
 
-All three methods give a self-similarity of exactly 1. On the test data — a base
+`hsqc_lcc.py` implements a fourth method **synthesized from the strengths of the
+other three**:
+
+```bash
+python3 hsqc_lcc.py exp1 exp2 --f2-min 6.5 --f2-max 10 --f1-min 105 --f1-max 130
+python3 hsqc_lcc.py exp1 exp2 --sigma-f2 0.03 --sigma-f1 0.30 --json
+```
+
+- **Lineshape Correlation Coefficient (LCC, this work)** renders each spectrum to
+  one shared grid, blurs it by the physical NMR linewidth (a Gaussian per axis,
+  `sigma = sqrt(linewidth² + expected_drift²)`), then scores the two images with
+  the mean-centred normalized cross-correlation (Pearson / ZNCC) at **zero lag**
+  (no shift search). The Gaussian render replaces the bin method's brittle hard
+  edges with graded shift tolerance; mean-centring rewards *co-located* intensity
+  and penalises intensity where the other spectrum is empty, so a differently
+  scattered protein decorrelates instead of finding coincidental near-matches (the
+  saturation trap of the tree and nearest-neighbour methods). Refusing to align is
+  deliberate — alignment would let a different protein slide into registration and
+  saturate. Self-similarity is exactly 1.
+
+All four methods give a self-similarity of exactly 1. On the test data — a base
 `1H-15N` HSQC compared with the same protein plus ligand (should score high) and
 a *different* protein (should score low) — they separate the two cases very
-differently:
+differently (`separation` = mean same-protein score − different-protein score;
+`margin` = worst same-protein score − different-protein score):
 
-| method | self | same protein | different protein | separation |
-| --- | --- | --- | --- | --- |
-| Bin (Bodis 2009) | 1.00 | 0.82 | 0.50 | **0.32** |
-| Bin + 45° rotation | 1.00 | 0.86 | 0.57 | 0.29 |
-| Quad-tree (Castillo 2013) | 1.00 | 0.92 | 0.87 | 0.05 |
-| Nearest-neighbour (Pierens 2012) | 1.00 | 0.99 | 0.96 | 0.03 |
+| method | self | mean same | different | separation | margin |
+| --- | --- | --- | --- | --- | --- |
+| Bin (Bodis 2009) | 1.00 | 0.79 | 0.49 | 0.29 | 0.24 |
+| Bin + 45° rotation | 1.00 | 0.82 | 0.57 | 0.25 | 0.20 |
+| Quad-tree (Castillo 2013) | 1.00 | 0.90 | 0.87 | 0.03 | −0.01 |
+| Nearest-neighbour (Pierens 2012) | 1.00 | 0.99 | 0.96 | 0.04 | 0.03 |
+| **LCC (this work)** | 1.00 | **0.94** | **0.18** | **0.75** | **0.71** |
 
-The bin method separates same-protein from different-protein spectra far better
-here. The quad-tree and nearest-neighbour methods were designed for **sparse
+LCC separates same-protein from different-protein spectra ~2.6× better than the
+previous best and pushes the different protein (0.18) below *every* same-protein
+score. It beats the bin method across the whole physical blur range (separation
+0.71–0.77 at `sigma` 0.02–0.04 / 0.20–0.40 ppm, still 0.36 even coarsened to the
+bin method's own resolution), so the gain is not one tuned parameter. Full numbers,
+robustness sweep, and a plot are in [`results/`](results/README.md).
+
+The quad-tree and nearest-neighbour methods were designed for **sparse
 small-molecule `1H-13C` HSQC** and for **shift insensitivity**: with the dense
 `1H-15N` amide fingerprint (150+ peaks filling one crowded region) every spectrum
 has a near neighbour for every peak and similar mass-centre structure, so both
 saturate near 1 and barely discriminate. Method choice should follow the regime:
-bins for dense protein fingerprints, tree/nearest-neighbour for sparse
-small-molecule spectra where shift tolerance matters.
+**LCC for dense protein fingerprints and titration tracking**, bins as a
+resolution-scanning baseline, tree/nearest-neighbour for sparse small-molecule
+spectra where shift tolerance matters.
 
 ## References
 
