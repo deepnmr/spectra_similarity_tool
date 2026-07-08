@@ -227,7 +227,9 @@ python3 hsqc_lcc.py exp1 exp2 --sigma-f2 0.03 --sigma-f1 0.30 --json
   scattered protein decorrelates instead of finding coincidental near-matches (the
   saturation trap of the tree and nearest-neighbour methods). Refusing to align is
   deliberate — alignment would let a different protein slide into registration and
-  saturate. Self-similarity is exactly 1.
+  saturate. Self-similarity is exactly 1. Full mathematical derivation, including the
+  graded shift-tolerance and self-similarity proofs, is in
+  [`doc/LCC_method.md`](doc/LCC_method.md).
 
 All four methods give a self-similarity of exactly 1. On the test data — a base
 `1H-15N` HSQC compared with the same protein plus ligand (should score high) and
