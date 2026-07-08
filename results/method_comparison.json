@@ -1,74 +1,85 @@
 {
-  "meta": {
-    "reference": "PRL3 exp 2 (1H-15N HSQC)",
-    "window_F2": [
+  "window": {
+    "f2": [
       6.5,
-      10.0
+      10
     ],
-    "window_F1": [
+    "f1": [
       105,
       130
-    ],
-    "min_bin_width_f2": 0.1,
-    "min_bin_width_f1": 1.0,
-    "note": "same-protein ligand titration (4-14) vs different protein (OAA 103)"
+    ]
   },
-  "results": [
+  "rows": [
     {
       "comparison": "2_base vs 2_base",
       "bin_Bodis09": 1.0,
       "bin_rot45": 1.0,
       "tree_Castillo13": 1.0,
-      "nn_Pierens12": 1.0
+      "nn_Pierens12": 1.0,
+      "lcc_new": 1.0
     },
     {
       "comparison": "2_base vs 4_+B12",
       "bin_Bodis09": 0.8106,
       "bin_rot45": 0.8385,
       "tree_Castillo13": 0.9401,
-      "nn_Pierens12": 0.9925
+      "nn_Pierens12": 0.9925,
+      "lcc_new": 0.9662
     },
     {
       "comparison": "2_base vs 6_+NB91",
       "bin_Bodis09": 0.7739,
       "bin_rot45": 0.799,
       "tree_Castillo13": 0.8619,
-      "nn_Pierens12": 0.9981
+      "nn_Pierens12": 0.9981,
+      "lcc_new": 0.9594
     },
     {
       "comparison": "2_base vs 8_+benz",
       "bin_Bodis09": 0.8274,
       "bin_rot45": 0.857,
       "tree_Castillo13": 0.9443,
-      "nn_Pierens12": 0.9877
+      "nn_Pierens12": 0.9877,
+      "lcc_new": 0.9485
     },
     {
       "comparison": "2_base vs 10_+GB001",
       "bin_Bodis09": 0.8164,
       "bin_rot45": 0.8555,
       "tree_Castillo13": 0.9179,
-      "nn_Pierens12": 0.9848
+      "nn_Pierens12": 0.9848,
+      "lcc_new": 0.8972
     },
     {
       "comparison": "2_base vs 12_+PF1",
       "bin_Bodis09": 0.7637,
       "bin_rot45": 0.7912,
       "tree_Castillo13": 0.876,
-      "nn_Pierens12": 0.9978
+      "nn_Pierens12": 0.9978,
+      "lcc_new": 0.9558
     },
     {
       "comparison": "2_base vs 14_+PF2",
       "bin_Bodis09": 0.732,
       "bin_rot45": 0.7654,
       "tree_Castillo13": 0.8624,
-      "nn_Pierens12": 0.9851
+      "nn_Pierens12": 0.9851,
+      "lcc_new": 0.8911
     },
     {
       "comparison": "2_base vs OAA_103_diffprotein",
       "bin_Bodis09": 0.4949,
       "bin_rot45": 0.5681,
       "tree_Castillo13": 0.8721,
-      "nn_Pierens12": 0.955
+      "nn_Pierens12": 0.955,
+      "lcc_new": 0.1815
     }
-  ]
+  ],
+  "separation": {
+    "bin_Bodis09": 0.2924,
+    "bin_rot45": 0.2497,
+    "tree_Castillo13": 0.0283,
+    "nn_Pierens12": 0.036,
+    "lcc_new": 0.7549
+  }
 }
