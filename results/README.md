@@ -1,5 +1,10 @@
 # Method comparison results
 
+**See [`comparison_all.md`](comparison_all.md) for the master table across both regimes.**
+This file covers the dense protein `1H-15N` benchmark; the sparse small-molecule `1H-13C`
+benchmark is in [`comparison_13c.md`](comparison_13c.md).
+
+
 Reference spectrum: **PRL3 experiment 2**, a `1H-15N` HSQC. Compared against the
 same protein plus ligand (experiments 4–14, a titration series that should score
 high) and against a **different protein** (OAA experiment 103, which should score
