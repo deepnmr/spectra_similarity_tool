@@ -261,6 +261,17 @@ saturate near 1 and barely discriminate. Method choice should follow the regime:
 resolution-scanning baseline, tree/nearest-neighbour for sparse small-molecule
 spectra where shift tolerance matters.
 
+### Cross-regime check on `1H-13C` (sparse small molecules)
+
+The same benchmark on **sparse small-molecule `1H-13C` HSQC** — public peak lists for
+six compounds each recorded twice, scoring same-compound pairs against
+different-compound pairs — gives the same ranking: **LCC separates best (0.81)**, bins
+follow (0.69), and the tree and nearest-neighbour methods saturate again (0.39 and 0.10)
+because over a wide window a different molecule still has a near neighbour for every
+peak. Their shift tolerance is real but shows up as tolerating *everything*; LCC recovers
+it controllably through its blur width. Run `python3.11 bench_13c.py`; details in
+[`results/comparison_13c.md`](results/comparison_13c.md).
+
 ## References
 
 1. L. Bodis, A. Ross, E. Pretsch, *A novel spectra similarity measure*,
