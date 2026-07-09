@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from hsqc_similarity import hsqc_similarity, read_bruker_2d
@@ -32,8 +33,10 @@ def _methods():
         "nn_Pierens12": lambda x, y: nn_peak_similarity(x, y, **WINDOW)["similarity"],
     }
     try:
-        from hsqc_lcc import lcc_similarity  # the new synthesized method
+        from hsqc_lcc import lcc_similarity, cosine_similarity  # the new synthesized method
         m["lcc_new"] = lambda x, y: lcc_similarity(x, y, **WINDOW)["similarity"]
+        # Ablation baseline: same render/blur as LCC without mean-centring (un-centred cosine).
+        m["cosine_uncentred"] = lambda x, y: cosine_similarity(x, y, **WINDOW)["similarity"]
     except Exception:
         pass
     return m
@@ -61,13 +64,22 @@ def run(prl3: Path, oaa: Path) -> dict:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser()
-    p.add_argument("--prl3", type=Path, default=Path("/Users/donghanlee/PRL3_mark_5nov24"))
-    p.add_argument("--oaa", type=Path, default=Path("/Users/donghanlee/Downloads/OAA_CEST_277K_04may15"))
+    # No hard-coded private paths: the dense PRL3/OAA Bruker data are not redistributable, so the
+    # locations come from --prl3/--oaa or the $PRL3_DIR/$OAA_DIR environment variables. The sparse
+    # 1H-13C benchmark (bench_13c.py) needs no such data -- it downloads public peak lists.
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--prl3", type=Path, default=os.environ.get("PRL3_DIR"),
+                   help="PRL3 Bruker experiment directory (or set $PRL3_DIR)")
+    p.add_argument("--oaa", type=Path, default=os.environ.get("OAA_DIR"),
+                   help="OAA Bruker experiment directory (or set $OAA_DIR)")
     p.add_argument("--json", action="store_true")
     args = p.parse_args()
+    if not args.prl3 or not args.oaa:
+        p.error("dense benchmark needs the PRL3/OAA Bruker data: pass --prl3 and --oaa "
+                "(or set $PRL3_DIR/$OAA_DIR). The data are available from the author on request; "
+                "the public sparse 1H-13C benchmark runs with no data via `python3 bench_13c.py`.")
 
-    result = run(args.prl3, args.oaa)
+    result = run(Path(args.prl3), Path(args.oaa))
     if args.json:
         print(json.dumps(result, indent=2))
         return 0

@@ -89,13 +89,19 @@ def render_image(
     return RenderedImage(image=image, step_f2=dx2, step_f1=dx1)
 
 
-def _zncc(a: np.ndarray, b: np.ndarray) -> float:
-    """Mean-centred normalized cross-correlation (Pearson) at zero lag, clamped to [0,1].
+def _zncc(a: np.ndarray, b: np.ndarray, center: bool = True) -> float:
+    """Normalized cross-correlation at zero lag, clamped to [0,1].
+
+    With ``center=True`` (default) this is the mean-centred correlation (Pearson / ZNCC):
+    a cell where one image has a peak and the other is empty contributes a NEGATIVE product
+    and lowers the score, so non-co-located intensity is actively penalised. With
+    ``center=False`` it is the un-centred cosine similarity (the mass-spectral contrast
+    angle) -- the ablation baseline that isolates what mean-centring buys.
 
     Self-value is exactly 1: with a == b the ratio is ||ah||^2 / ||ah||^2, and the
     min(1, .) clamp absorbs the last-ULP fp wobble so identical images return 1.0."""
-    ah = a - a.mean()
-    bh = b - b.mean()
+    ah = a - a.mean() if center else a
+    bh = b - b.mean() if center else b
     denom = float(np.sqrt(np.sum(ah * ah) * np.sum(bh * bh)))
     if denom <= 0:  # a flat image has no lineshape to correlate
         return 0.0
@@ -113,8 +119,12 @@ def lcc_similarity(
     step_f1: float = 0.10,
     baseline: str = "clip",
     intensity_p: float = 1.0,
+    center: bool = True,
 ) -> dict[str, object]:
-    """Lineshape Correlation Coefficient similarity in [0, 1]; 1 for identical spectra."""
+    """Lineshape Correlation Coefficient similarity in [0, 1]; 1 for identical spectra.
+
+    ``center=False`` gives the un-centred cosine (contrast-angle) ablation of the same
+    rendered/blurred images -- see ``cosine_similarity``."""
     range_f2, range_f1 = _overlap_ranges(spectrum_x, spectrum_y, range_f2, range_f1)
     render = lambda s: render_image(
         s, range_f2, range_f1, sigma_f2=sigma_f2, sigma_f1=sigma_f1,
@@ -122,10 +132,10 @@ def lcc_similarity(
     )
     img_x = render(spectrum_x)
     img_y = render(spectrum_y)
-    similarity = _zncc(img_x.image, img_y.image)
+    similarity = _zncc(img_x.image, img_y.image, center=center)
 
     return {
-        "method": "lcc",
+        "method": "lcc" if center else "cosine",
         "similarity": float(similarity),
         "sigma_f2": float(sigma_f2),
         "sigma_f1": float(sigma_f1),
@@ -138,6 +148,15 @@ def lcc_similarity(
         "source_x": str(spectrum_x.source),
         "source_y": str(spectrum_y.source),
     }
+
+
+def cosine_similarity(spectrum_x: Spectrum2D, spectrum_y: Spectrum2D, **kwargs) -> dict[str, object]:
+    """Un-centred cosine (contrast-angle) similarity of the LCC-rendered/blurred images.
+
+    Identical to ``lcc_similarity`` but WITHOUT mean-centring -- the ablation baseline that
+    shows what the mean-centring step buys (it is the discriminating operation)."""
+    kwargs.pop("center", None)
+    return lcc_similarity(spectrum_x, spectrum_y, center=False, **kwargs)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -156,7 +175,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--step-f2", type=float, default=0.01, help="F2 render pixel width in ppm")
     p.add_argument("--step-f1", type=float, default=0.10, help="F1 render pixel width in ppm")
     p.add_argument("--p", type=float, default=1.0, help="Intensity compression exponent (1.0 = off)")
-    p.add_argument("--baseline", choices=["clip", "shift", "none"], default="clip")
+    p.add_argument("--baseline", choices=["clip", "abs", "shift", "none"], default="clip")
     p.add_argument("--json", action="store_true")
     return p
 

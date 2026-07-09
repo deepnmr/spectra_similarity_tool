@@ -52,6 +52,8 @@ def _window(
     intensity = spectrum.intensity.astype(np.float64, copy=True)
     if baseline == "clip":
         intensity[intensity < 0] = 0.0
+    elif baseline == "abs":  # sign encodes multiplicity (edited HSQC CH2), not absence
+        np.abs(intensity, out=intensity)
     elif baseline == "shift":
         intensity -= intensity.min()
     elif baseline != "none":
@@ -350,7 +352,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--f2-max", type=float, default=None)
     parser.add_argument("--f1-min", type=float, default=None)
     parser.add_argument("--f1-max", type=float, default=None)
-    parser.add_argument("--baseline", choices=["clip", "shift", "none"], default="clip")
+    parser.add_argument("--baseline", choices=["clip", "abs", "shift", "none"], default="clip")
     parser.add_argument("--threshold-frac", type=float, default=None, help="Peak/leaf threshold fraction")
     parser.add_argument("--json", action="store_true")
     return parser
