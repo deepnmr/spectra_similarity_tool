@@ -45,11 +45,16 @@ methods, both benchmark harnesses and a test suite.
 
 A recurring task in NMR is to score how similar two 2D HSQC spectra are: tracking a
 $^1$H-$^{15}$N amide fingerprint across a ligand titration, mapping a chemical shift
-perturbation on binding (Shuker *et al.*, 1996; Pellecchia *et al.*, 2008; Williamson, 2013),
-or matching a small-molecule $^1$H-$^{13}$C spectrum against a library (Ulrich *et al.*, 2008).
-Three families of measure are in use. The bin method of Bodis *et al.* integrates each spectrum
-over an $n \times n$ grid at a range of resolutions and reports a weighted Jaccard (Ružička)
-index (Bodis *et al.*, 2007, 2009). The tree method of Castillo *et al.* encodes a spectrum as a
+perturbation on binding (Shuker *et al.*, 1996; Pellecchia *et al.*, 2008; Erlanson *et al.*,
+2016; Williamson, 2013), or matching a small-molecule $^1$H-$^{13}$C spectrum against a
+database — a comparison central to 2D-NMR metabolomics and natural-product work (Robinette
+*et al.*, 2012; Bingol and Brüschweiler, 2014; Worley and Powers, 2013), where spectra are also
+matched against community libraries (Ulrich *et al.*, 2008; Steinbeck and Kuhn, 2004; Wishart
+*et al.*, 2022). Three families of measure are in use. The bin method of Bodis *et al.*
+integrates each spectrum over an $n \times n$ grid at a range of resolutions and reports a
+weighted Jaccard (Ružička) index (Bodis *et al.*, 2007, 2009), in the lineage of the binning and
+normalization schemes used across NMR metabonomics (Craig *et al.*, 2006; Dieterle *et al.*,
+2006). The tree method of Castillo *et al.* encodes a spectrum as a
 recursive centre-of-mass quad-tree and compares the trees node-by-node with a shift-tolerant
 node score (Castillo *et al.*, 2013). The peak method of Pierens *et al.* picks peaks and
 matches each to its nearest neighbour in the other spectrum (Pierens *et al.*, 2012).
@@ -67,8 +72,8 @@ LCC keeps the physically meaningful ingredients of the three methods — area-we
 and unit normalization (Bodis), a physical shift tolerance (Castillo), a lineshape picture of the
 spectrum (Pierens) — and adds a mean-centred correlation as the discriminating step. Given two
 spectra (processed Bruker data from any standard pipeline — Delaglio *et al.*, 1995; Vranken *et
-al.*, 2005; Skinner *et al.*, 2016 — or peak lists) compared inside a common window, it proceeds
-in three steps.
+al.*, 2005; Skinner *et al.*, 2016; Ludwig and Günther, 2011 — or peak lists) compared inside a
+common window, it proceeds in three steps.
 
 **Render.** Negative intensities are clipped, each point is weighted by its local integration
 area, and both spectra are histogrammed onto a **single shared grid** so they are directly
@@ -82,12 +87,15 @@ $\exp(-\Delta_1^2/4\sigma_1^2 - \Delta_2^2/4\sigma_2^2)$, smooth and monotone in
 physical shift costs little and a random relocation costs a lot.
 
 **Score.** Each image is mean-centred and the similarity is the zero-lag normalized
-cross-correlation (the Pearson coefficient) of the two centred images, clamped to $[0,1]$.
-Mean-centring is the discriminating step: a cell where one spectrum has a peak and the other is
-empty contributes a negative product and lowers the score, so intensity that is not co-located is
-actively penalized rather than, as in the nearest-neighbour distance, ignored. No shift search is
-performed — aligning the images would let a different spectrum slide into registration and
-re-saturate, the failure mode of the tree and nearest-neighbour methods.
+cross-correlation (the Pearson coefficient) of the two centred images, clamped to $[0,1]$ — the
+spectral-imaging analogue of the cosine/contrast-angle similarity long used in mass-spectral
+library search (Stein and Scott, 1994; Wan *et al.*, 2002). Mean-centring is the discriminating
+step: a cell where one spectrum has a peak and the other is empty contributes a negative product
+and lowers the score, so intensity that is not co-located is actively penalized rather than, as in
+the nearest-neighbour distance, ignored. No shift search is performed — aligning the images (as in
+NMR peak-alignment tools such as icoshift; Savorani *et al.*, 2010) would let a different spectrum
+slide into registration and re-saturate, the failure mode of the tree and nearest-neighbour
+methods.
 
 Self-similarity is exactly one (as it is for all methods tested); the score is symmetric exactly,
 and monotone in the drift of an isolated peak (verified in the unit tests). The implementation is
@@ -157,8 +165,8 @@ regimes; the tree and nearest-neighbour methods saturate in both.](../results/co
 
 The dense $^1$H-$^{15}$N benchmark uses PRL3 and OAA Bruker spectra available from the author on
 reasonable request. The sparse $^1$H-$^{13}$C benchmark uses public HSQC peak lists from the
-simpleNMR example set (https://github.com/EricHughesABC/simpleNMR), downloaded automatically by
-`bench_13c.py`. Both harnesses (`bench.py`, `bench_13c.py`) and the tabulated scores are in the
+simpleNMR example set (Hughes and Kenwright, 2024;
+https://github.com/EricHughesABC/simpleNMR), downloaded automatically by `bench_13c.py`. Both harnesses (`bench.py`, `bench_13c.py`) and the tabulated scores are in the
 repository.
 
 ## Funding
@@ -171,6 +179,9 @@ None declared.
 
 ## References
 
+Bingol,K. and Brüschweiler,R. (2014) Multidimensional approaches to NMR-based metabolomics.
+*Anal. Chem.*, **86**, 47–57.
+
 Bodis,L. *et al.* (2007) A novel spectra similarity measure. *Chemometr. Intell. Lab. Syst.*,
 **85**, 1–8.
 
@@ -180,15 +191,32 @@ structures of chemical compounds. *Talanta*, **79**, 1379–1386.
 Castillo,A.M. *et al.* (2013) Fast and shift-insensitive similarity comparisons of NMR using a
 tree-representation of spectra. *Chemometr. Intell. Lab. Syst.*, **127**, 1–6.
 
+Craig,A. *et al.* (2006) Scaling and normalization effects in NMR spectroscopic metabonomic
+data sets. *Anal. Chem.*, **78**, 2262–2267.
+
 Delaglio,F. *et al.* (1995) NMRPipe: a multidimensional spectral processing system based on
 UNIX pipes. *J. Biomol. NMR*, **6**, 277–293.
+
+Dieterle,F. *et al.* (2006) Probabilistic quotient normalization as robust method to account for
+dilution of complex biological mixtures. Application in 1H NMR metabonomics. *Anal. Chem.*,
+**78**, 4281–4290.
+
+Erlanson,D.A. *et al.* (2016) Twenty years on: the impact of fragments on drug discovery.
+*Nat. Rev. Drug Discov.*, **15**, 605–619.
 
 Harris,C.R. *et al.* (2020) Array programming with NumPy. *Nature*, **585**, 357–362.
 
 Helmus,J.J. and Jaroniec,C.P. (2013) Nmrglue: an open source Python package for the analysis of
 multidimensional NMR data. *J. Biomol. NMR*, **55**, 355–367.
 
+Hughes,E. and Kenwright,A.M. (2024) SimpleNMR: an interactive graph network approach to aid
+constitutional isomer verification using standard 1D and 2D NMR experiments. *Magn. Reson. Chem.*,
+**62**, 556–565.
+
 Hunter,J.D. (2007) Matplotlib: a 2D graphics environment. *Comput. Sci. Eng.*, **9**, 90–95.
+
+Ludwig,C. and Günther,U.L. (2011) MetaboLab — advanced NMR data processing and analysis for
+metabolomics. *BMC Bioinformatics*, **12**, 366.
 
 Pellecchia,M. *et al.* (2008) Perspectives on NMR in drug discovery: a technique comes of age.
 *Nat. Rev. Drug Discov.*, **7**, 738–745.
@@ -196,16 +224,37 @@ Pellecchia,M. *et al.* (2008) Perspectives on NMR in drug discovery: a technique
 Pierens,G.K. *et al.* (2012) HSQC spectral based similarity matching of compounds using nearest
 neighbours and a fast discrete genetic algorithm. *J. Cheminform.*, **4**, 25.
 
+Robinette,S.L. *et al.* (2012) NMR in metabolomics and natural products research: two sides of
+the same coin. *Acc. Chem. Res.*, **45**, 288–297.
+
+Savorani,F. *et al.* (2010) icoshift: a versatile tool for the rapid alignment of 1D NMR spectra.
+*J. Magn. Reson.*, **202**, 190–202.
+
 Shuker,S.B. *et al.* (1996) Discovering high-affinity ligands for proteins: SAR by NMR.
 *Science*, **274**, 1531–1534.
 
 Skinner,S.P. *et al.* (2016) CcpNmr AnalysisAssign: a flexible platform for integrated NMR
 analysis. *J. Biomol. NMR*, **66**, 111–124.
 
+Stein,S.E. and Scott,D.R. (1994) Optimization and testing of mass spectral library search
+algorithms for compound identification. *J. Am. Soc. Mass Spectrom.*, **5**, 859–866.
+
+Steinbeck,C. and Kuhn,S. (2004) NMRShiftDB — compound identification and structure elucidation
+support through a free community-built web database. *Phytochemistry*, **65**, 2711–2717.
+
 Ulrich,E.L. *et al.* (2008) BioMagResBank. *Nucleic Acids Res.*, **36**, D402–D408.
 
 Vranken,W.F. *et al.* (2005) The CCPN data model for NMR spectroscopy: development of a software
 pipeline. *Proteins*, **59**, 687–696.
 
+Wan,K.X. *et al.* (2002) Comparing similar spectra: from similarity index to spectral contrast
+angle. *J. Am. Soc. Mass Spectrom.*, **13**, 85–88.
+
 Williamson,M.P. (2013) Using chemical shift perturbation to characterise ligand binding.
 *Prog. Nucl. Magn. Reson. Spectrosc.*, **73**, 1–16.
+
+Wishart,D.S. *et al.* (2022) HMDB 5.0: the Human Metabolome Database for 2022. *Nucleic Acids
+Res.*, **50**, D622–D631.
+
+Worley,B. and Powers,R. (2013) Multivariate analysis in metabolomics. *Curr. Metabolomics*,
+**1**, 92–107.
