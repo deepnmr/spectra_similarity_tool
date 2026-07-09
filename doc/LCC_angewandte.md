@@ -132,7 +132,7 @@ score is exactly symmetric, and it is monotone in the drift of an isolated peak 
 the test suite; Supporting Information). The implementation is pure NumPy,$^{[31]}$ reads
 processed Bruker data directly, requires neither peak picking nor an external solver, and runs
 in about 6 ms per spectrum pair on a $250 \times 350$ grid (Apple Silicon, single core). A
-26-test suite (all passing) checks self-similarity, related-beats-unrelated ordering, and
+27-test suite (all passing) checks self-similarity, related-beats-unrelated ordering, and
 monotonicity in drift, plus regressions for the mean-centring ablation, the `abs` baseline and the
 duplicate-pair guard; figures use Matplotlib.$^{[32]}$ A full derivation with proofs is given in
 the Supporting Information.
@@ -148,7 +148,7 @@ Every method self-scores exactly 1.00.
 compared with six spectra of the same protein along a ligand titration (which should score high)
 and with a **different** protein (which should score low), inside a
 $^1$H 6.5–10 $\times$ $^{15}$N 105–130 ppm window. LCC scores the same protein 0.94 (range
-0.89–0.97) and the different protein 0.18, a margin of 0.71 — three times the bin method's 0.24,
+0.89–0.97) and the different protein 0.18, a margin of 0.71 — three times the bin method's margin of 0.24,
 the strongest baseline. Mean-centring earns that gap: replacing it with an un-centred cosine
 overlap on the *same* images drops the separation from 0.75 to 0.59. This gain is not a tuned
 artefact; it holds across the entire physical blur range and even survives coarsening the grid
@@ -235,7 +235,7 @@ comparability assessment of protein biotherapeutics and biosimilars, where 2D-NM
 comparison is already an established readout.$^{[15,16]}$ The natural next steps are a prospective,
 at-scale dereplication study against a community library and a formulation/biosimilar HOS
 comparison, for both of which LCC supplies the scoring primitive. The full derivation, all three benchmark protocols, every numerical table with
-confidence intervals, and the 26-test suite are provided as Supporting Information; the software is
+confidence intervals, and the 27-test suite are provided as Supporting Information; the software is
 freely available under the MIT license.
 
 ## Figures
@@ -297,7 +297,8 @@ thresholded separation/margin does.
 apo–olsalazine titration (23 same-protein points, exps 4–48) scored against **two** decoy proteins
 (OAA, EphB3) in the $^1$H 6.5–10 $\times$ $^{15}$N 105–130 ppm window. Separation = mean same − mean
 decoy; margin = worst same − worst decoy. Higher is better; every method self-scores 1.00.
-Reproducible with `python3 bench_nhsqc.py`.
+Computed by `python3 bench_nhsqc.py` (harness and derived scores `results/nhsqc_dense.json` are in
+the repository; the raw Bruker matrices are available from the author pending public DOI deposition).
 
 | Method | mean same | min same | OAA | EphB3 | separation | margin |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -333,7 +334,7 @@ The author declares no conflict of interest.
 ## Data Availability Statement
 
 The software (LCC, the three reference methods, the un-centred-cosine ablation, all three
-benchmark harnesses, the tabulated scores and the 26-test suite) is freely available under the MIT
+benchmark harnesses, the tabulated scores and the 27-test suite) is freely available under the MIT
 license at https://github.com/deepnmr/spectra_similarity_tool. The **sparse $^1$H–$^{13}$C
 benchmark and the dereplication/retrieval experiment are fully reproducible from public data**:
 the harnesses download the simpleNMR peak lists (https://github.com/EricHughesABC/simpleNMR)

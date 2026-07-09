@@ -335,8 +335,9 @@ self-score exactly 1.
 | mean same − different (sep.) | 0.29 | 0.25 | 0.03 | 0.04 | **0.75** |
 | worst-case margin | 0.24 | 0.20 | −0.01 | 0.03 | **0.71** |
 
-LCC separates same-protein from different-protein spectra $\approx 2.6\times$ better than the
-previous best, pushing the different protein (0.18) below *every* same-protein score. The old bin
+LCC separates same-protein from different-protein spectra $\approx 2.6\times$ better in separation
+(0.75 vs 0.29) than the previous best, pushing the different protein (0.18) below *every*
+same-protein score. The old bin
 method left the different protein (0.49) close to the worst same-protein point (0.73); LCC opens a
 wide gap.
 
@@ -506,13 +507,13 @@ Matplotlib [18].
   `retrieval_13c.json`; `python3.11 results/make_schematic.py` — regenerates Figure 1;
   `python3.11 results/make_si_figs.py` — regenerates the ten SI method figures (S1–S10).
 
-**Test suite.** A 26-test suite (all passing) checks the properties proved in §S5 (self-similarity
+**Test suite.** A 27-test suite (all passing) checks the properties proved in §S5 (self-similarity
 is exactly 1, related spectra score above unrelated ones, monotonicity in drift) plus the three
 bug-fix regressions: the un-centred cosine scores an unrelated pair *higher* than mean-centred LCC
 (so mean-centring is the discriminating step), the `abs` baseline preserves negative CH$_2$ peaks
 that `clip` deletes, and a byte-identical same-pair is rejected. Run with `python3.11 -m pytest`
 (files under `tests/`: `test_hsqc_lcc.py`, `test_hsqc_methods.py`, `test_hsqc_similarity.py`,
-`test_bench_13c.py`, `test_spectrum_similarity.py`).
+`test_bench_13c.py`, `test_bench_nhsqc.py`, `test_bench_retrieval.py`, `test_spectrum_similarity.py`).
 
 ## S13 Statistical strength: bootstrap CIs and a retrieval test
 
