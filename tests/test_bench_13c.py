@@ -2,7 +2,9 @@ import json
 import tempfile
 from pathlib import Path
 
-from bench_13c import load_peaklist
+import pytest
+
+from bench_13c import _assert_distinct, load_peaklist
 from hsqc_lcc import lcc_similarity
 
 
@@ -37,3 +39,11 @@ def test_loader_self_similarity_is_one():
     spec = load_peaklist(path)
     assert lcc_similarity(spec, spec, sigma_f2=0.05, sigma_f1=0.5, step_f2=0.02, step_f1=0.2,
                           range_f2=(0.0, 10.0), range_f1=(0.0, 165.0))["similarity"] == 1.0
+
+
+def test_duplicate_same_pair_is_rejected():
+    # A same-compound pair must be two distinct recordings; byte-identical files (the
+    # olivetol bug) render to an identical image and must be rejected, not scored as 1.00.
+    spec = load_peaklist(_write_peaklist([(3.26, 71.1, 2.4), (0.9, 22.0, 1.0)]))
+    with pytest.raises(ValueError):
+        _assert_distinct({"a": spec, "b": spec}, [("a", "b")])

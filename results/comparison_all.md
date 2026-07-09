@@ -6,11 +6,17 @@ Higher is better; all methods self-score exactly 1.00.
 
 | method | `1H-15N` sep | `1H-15N` margin | `1H-13C` sep | `1H-13C` margin |
 | --- | --- | --- | --- | --- |
-| Bin (Bodis 2009) | 0.29 | 0.24 | 0.69 | 0.20 |
-| Bin + 45° | 0.25 | 0.20 | 0.69 | 0.18 |
-| Quad-tree (Castillo 2013) | 0.03 | −0.01 | 0.39 | 0.00 |
+| Bin (Bodis 2009) | 0.29 | 0.24 | 0.65 | 0.20 |
+| Bin + 45° | 0.25 | 0.20 | 0.65 | 0.18 |
+| Quad-tree (Castillo 2013) | 0.03 | −0.01 | 0.41 | 0.09 |
 | Nearest neighbour (Pierens 2012) | 0.04 | 0.03 | 0.10 | 0.04 |
-| **LCC (this work)** | **0.75** | **0.71** | **0.81** | **0.37** |
+| Cosine, un-centred (LCC ablation) | 0.59 | — | 0.78 | 0.37 |
+| **LCC (this work)** | **0.75** | **0.71** | **0.78** | **0.37** |
+
+The `1H-13C` benchmark uses **5** genuinely-distinct same-compound pairs (40 different); a nominal
+sixth pair (olivetol) was excluded as a byte-identical duplicate. The un-centred cosine is LCC
+without mean-centring: it ties LCC on `1H-13C` (0.78) but drops to 0.59 on the dense `1H-15N`
+fingerprint — mean-centring is the discriminating step only where peaks crowd.
 
 ![separation across both regimes](comparison_all.png)
 

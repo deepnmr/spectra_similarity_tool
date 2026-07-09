@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
-from hsqc_lcc import lcc_similarity
+from hsqc_lcc import cosine_similarity, lcc_similarity
 from hsqc_similarity import Spectrum2D
 
 
@@ -52,3 +52,30 @@ def test_lcc_monotonic_in_drift():
                                  (7.0 + d, 120.0 + 10 * d, 0.1, 1.5, 0.8)], "drift")
         scores.append(lcc_similarity(reference, drifted, **KW)["similarity"])
     assert all(scores[i] >= scores[i + 1] - 1e-9 for i in range(len(scores) - 1)), scores
+
+
+def test_cosine_self_is_one():
+    spectrum = make_spectrum(REF, "synthetic")
+    assert cosine_similarity(spectrum, spectrum, **KW)["similarity"] == 1.0
+
+
+def test_mean_centring_is_the_discriminating_step():
+    # The ablation claim: un-centred cosine of all-positive images cannot penalise
+    # non-co-located intensity, so it scores an UNRELATED spectrum HIGHER than the
+    # mean-centred LCC does. Mean-centring is what turns overlap into discrimination.
+    reference = make_spectrum(REF, "ref")
+    unrelated = make_spectrum(UNRELATED, "unrelated")
+    lcc = lcc_similarity(reference, unrelated, **KW)["similarity"]
+    cos = cosine_similarity(reference, unrelated, **KW)["similarity"]
+    assert cos > lcc
+
+
+def test_abs_baseline_keeps_negative_ch2_peaks():
+    # Edited-HSQC CH2 peaks are negative; clip deletes them (so a spectrum with an extra
+    # negative peak looks identical to one without), abs keeps them (so it looks different).
+    a = make_spectrum([(3.0, 40.0, 0.1, 1.5, 1.0)], "ch")               # one positive peak
+    b = make_spectrum([(3.0, 40.0, 0.1, 1.5, 1.0),
+                       (7.0, 120.0, 0.1, 1.5, -0.8)], "ch+ch2")         # + a negative CH2 peak
+    clipped = lcc_similarity(a, b, baseline="clip", **KW)["similarity"]
+    absed = lcc_similarity(a, b, baseline="abs", **KW)["similarity"]
+    assert clipped > absed  # under clip the extra CH2 vanishes, so b looks like a

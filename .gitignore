@@ -9,3 +9,10 @@ data_13c/
 # Copyrighted (non-open-access) papers: keep locally, do not publish
 doc/Castillo2013_Chemometrics_tree.pdf
 doc/Bodis2009_Talanta_2D_HSQC_bins.pdf
+
+# macOS
+.DS_Store
+
+# Raw Bruker N-HSQC data (341 MB, 1112 files): available from author, DOI-deposit before submission.
+# The derived matrices (results/nhsqc_dense.json) + harness (bench_nhsqc.py) ARE tracked.
+Nhsqc/

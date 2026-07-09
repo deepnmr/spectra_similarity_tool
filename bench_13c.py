@@ -21,14 +21,18 @@ import numpy as np
 
 from hsqc_similarity import Spectrum2D, hsqc_similarity
 from hsqc_methods import nn_peak_similarity, quadtree_similarity
-from hsqc_lcc import lcc_similarity
+from hsqc_lcc import lcc_similarity, cosine_similarity
 
 RAW = "https://raw.githubusercontent.com/EricHughesABC/simpleNMR/main/exampleProblems"
-# local_name -> (folder, remote_filename); two backups store the json under the compound name
+# local_name -> (folder, remote_filename); two backups store the json under the compound name.
+# NOTE: the olivetol pair (Olivetol/Olivetol_A) was dropped -- its two files are BYTE-IDENTICAL
+# (same MD5, identical peak lists), so it was a self-comparison scoring 1.00 for every method,
+# an information-free positive that inflated mean_same. run() also guards against any such
+# duplicate at load time (see _assert_distinct). The remaining 5 pairs are genuinely distinct
+# recordings/re-picks (verified: different peak coordinates).
 PAIRS = [
     ("menthol",     ("menthol_CDCl3", "menthol_CDCl3.json"), ("menthol_eeh", "menthol_eeh.json")),
     ("rotenone",    ("Rotenone", "Rotenone.json"), ("Rotenone-bckup", "Rotenone.json")),
-    ("olivetol",    ("Olivetol", "Olivetol.json"), ("Olivetol_A", "Olivetol_A.json")),
     ("santonin",    ("santonin", "santonin.json"), ("santonin_bckup", "santonin.json")),
     ("chartreusin", ("Chartreusin", "Chartreusin.json"), ("Chartreusin_eh", "Chartreusin_eh.json")),
     ("indanone",    ("2-ethyl-1-indanone", "2-ethyl-1-indanone.json"),
@@ -47,6 +51,9 @@ METHODS = {
     "tree_Castillo13": lambda x, y: quadtree_similarity(x, y, **WIN)["similarity"],
     "nn_Pierens12": lambda x, y: nn_peak_similarity(x, y, **WIN)["similarity"],
     "lcc_new":      lambda x, y: lcc_similarity(x, y, sigma_f2=0.05, sigma_f1=0.5, step_f2=0.02, step_f1=0.2, **WIN)["similarity"],
+    # Ablation baseline: same render/blur as LCC but WITHOUT mean-centring (un-centred cosine /
+    # contrast angle). Isolates what mean-centring buys -- see the ablation in the SI.
+    "cosine_uncentred": lambda x, y: cosine_similarity(x, y, sigma_f2=0.05, sigma_f1=0.5, step_f2=0.02, step_f1=0.2, **WIN)["similarity"],
 }
 
 
@@ -89,6 +96,18 @@ def _blur(m, sig_px, axis):
     return np.apply_along_axis(lambda row: np.convolve(row, k, mode="same"), axis, m)
 
 
+def _assert_distinct(specs: dict, same: list) -> None:
+    """A same-compound pair must be two DISTINCT recordings, not the same file twice.
+    Byte-identical inputs render to identical images and score 1.00 for every method, a
+    fake positive that inflates mean_same (this caught the olivetol duplicate)."""
+    for a, b in same:
+        if np.array_equal(specs[a].intensity, specs[b].intensity):
+            raise ValueError(
+                f"same-compound pair ({a}, {b}) renders to an identical image -- "
+                f"the two source files are duplicates, not independent recordings"
+            )
+
+
 def run(data_dir: Path) -> dict:
     download(data_dir)
     names = [v for _, a, b in PAIRS for v in (a[0], b[0])]
@@ -96,6 +115,7 @@ def run(data_dir: Path) -> dict:
     specs = {n: load_peaklist(data_dir / f"{n}.json") for n in names}
 
     same = [(a[0], b[0]) for _, a, b in PAIRS]
+    _assert_distinct(specs, same)
     diff = [(x, y) for x, y in itertools.combinations(names, 2) if comp[x] != comp[y]]
 
     rows, per_pair = {}, {}
