@@ -3,6 +3,9 @@ __pycache__/
 .pytest_cache/
 output/
 
+# Third-party HSQC peak lists downloaded by bench_13c.py (from EricHughesABC/simpleNMR)
+data_13c/
+
 # Copyrighted (non-open-access) papers: keep locally, do not publish
 doc/Castillo2013_Chemometrics_tree.pdf
 doc/Bodis2009_Talanta_2D_HSQC_bins.pdf
