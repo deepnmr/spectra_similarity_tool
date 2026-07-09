@@ -1,7 +1,8 @@
 # Source papers
 
-[`LCC_method.md`](LCC_method.md) documents the Lineshape Correlation Coefficient
-method (this work) in full, with equations.
+The Lineshape Correlation Coefficient method (this work) is documented in full, with
+equations and proofs, in the Angewandte manuscript [`LCC_angewandte.md`](LCC_angewandte.md)
+and its Supporting Information [`LCC_angewandte_SI.md`](LCC_angewandte_SI.md).
 
 The methods in this repository come from the following papers. Only the
 open-access one is stored here; the two Elsevier papers are kept locally but
