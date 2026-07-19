@@ -1,5 +1,5 @@
 #!/usr/bin/env python3.11
-"""Figure 1 for the Angewandte manuscript: LCC three-step schematic (a) + shift-tolerance curve (b).
+"""Figure 1 for the Angewandte manuscript: STCC three-step schematic (a) + shift-tolerance curve (b).
 
 ponytail: pure-matplotlib schematic, no repo imports; regenerate with `python3.11 make_schematic.py`.
 """

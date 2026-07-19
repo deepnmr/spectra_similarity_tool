@@ -1,42 +1,48 @@
 # Master comparison: both regimes at a glance
 
-All five similarity methods, on both benchmarks. **Separation** = mean(same) − mean(different);
-**margin** = worst same − best different (what a single classification threshold actually sees).
-Higher is better; all methods self-score exactly 1.00.
+Separation is mean same − mean different; margin is worst same − best
+different. Higher is better; every method self-scores exactly 1.00.
 
-| method | `1H-15N` sep | `1H-15N` margin | `1H-13C` sep | `1H-13C` margin |
-| --- | --- | --- | --- | --- |
-| Bin (Bodis 2009) | 0.29 | 0.24 | 0.65 | 0.20 |
-| Bin + 45° | 0.25 | 0.20 | 0.65 | 0.18 |
-| Quad-tree (Castillo 2013) | 0.03 | −0.01 | 0.41 | 0.09 |
-| Nearest neighbour (Pierens 2012) | 0.04 | 0.03 | 0.10 | 0.04 |
-| Cosine, un-centred (LCC ablation) | 0.59 | — | 0.78 | 0.37 |
-| **LCC (this work)** | **0.75** | **0.71** | **0.78** | **0.37** |
+## Primary method comparison
 
-The `1H-13C` benchmark uses **5** genuinely-distinct same-compound pairs (40 different); a nominal
-sixth pair (olivetol) was excluded as a byte-identical duplicate. The un-centred cosine is LCC
-without mean-centring: it ties LCC on `1H-13C` (0.78) but drops to 0.59 on the dense `1H-15N`
-fingerprint — mean-centring is the discriminating step only where peaks crowd.
+The dense column is the original PRL3 single-decoy benchmark. The sparse column
+uses the current stick-input protocol with 5 same-compound and 40
+different-compound pairs.
 
-![separation across both regimes](comparison_all.png)
+| method | dense `1H-15N` sep | margin | sparse `1H-13C` sep | margin |
+| --- | ---: | ---: | ---: | ---: |
+| Bin (Bodis 2009) | 0.292 | 0.237 | 0.675 | 0.212 |
+| Bin + 45° | 0.250 | 0.197 | 0.672 | 0.194 |
+| Quad-tree (Castillo 2013) | 0.028 | −0.010 | 0.413 | 0.069 |
+| Nearest neighbour (Pierens 2012) | 0.036 | 0.030 | 0.099 | 0.041 |
+| Cosine, un-centred (STCC ablation) | 0.590 | — | 0.744 | 0.373 |
+| **STCC (default)** | **0.755** | **0.710** | **0.745** | **0.374** |
 
-- **Dense protein `1H-15N`** (reference PRL3 vs same-protein titration vs a different protein):
-  full detail in [`README.md`](README.md).
-- **Sparse small-molecule `1H-13C`** (six compounds each recorded twice, same-compound pairs vs
-  different-compound pairs): full detail in [`comparison_13c.md`](comparison_13c.md).
+Among the primary methods, STCC gives the strongest separation in both regimes.
+Mean-centring matters in the crowded dense fingerprint (0.590→0.755) but changes
+little on sparse sticks (0.744→0.745).
 
-## Reading it
+![primary separation across both regimes](comparison_all.png)
 
-**LCC wins in both regimes** — the only method that keeps same-class similarity high while
-pushing different-class similarity down, whether the fingerprint is a dense protein amide region
-or a handful of scattered small-molecule crosspeaks.
+## Experimental Local-Contrast extension
 
-The bin method is a solid second and, notably, does *much* better on sparse `1H-13C` (0.69) than
-on dense `1H-15N` (0.29): with fewer, well-separated peaks its hard bins rarely straddle a peak.
-The quad-tree and nearest-neighbour methods **saturate in both regimes** — their margins stay
-near zero — because a crowded amide region and a wide small-molecule window both give every peak
-a coincidental near neighbour. Their built-in shift tolerance is real (it keeps solvent-shifted
-same-compound pairs high, see [`comparison_13c.md`](comparison_13c.md)) but it tolerates
-everything, so it does not translate into discrimination.
+Local Contrast is evaluated on the expanded dense benchmark (23 titration points,
+two decoys) and the same sparse stick benchmark:
 
-Numbers: [`comparison_all.json`](comparison_all.json).
+| benchmark | STCC sep / margin | Local Contrast sep / margin |
+| --- | ---: | ---: |
+| Dense: 23 same + 2 decoys | 0.5666 / 0.4051 | **0.6719 / 0.5230** |
+| Sparse: 5 same + 40 different | 0.7447 / 0.3736 | **0.8203 / 0.4336** |
+
+The candidate improves descriptive separation and margin in both examples. Its
+sparse compound-cluster paired gain over STCC is 0.0757 (95% CI
+0.0014–0.2057), but AUROC/AUPRC/top-1/MRR remain 1.00 and both methods retain
+zero leave-one-compound-out threshold error and rejection FPR. It therefore
+remains experimental; `--method lcc` remains the default.
+
+Details:
+
+- Dense original and expanded results: [`README.md`](README.md)
+- Sparse aggregate, per-pair and held-out results:
+  [`comparison_13c.md`](comparison_13c.md)
+- Machine-readable sparse values: [`comparison_13c.json`](comparison_13c.json)

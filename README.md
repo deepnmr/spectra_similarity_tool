@@ -9,9 +9,10 @@ Chemometrics and Intelligent Laboratory Systems 85 (2007) 1-8.
 same method to 2D (HSQC and other processed 2D experiments). `hsqc_methods.py`
 adds two alternative literature methods (a Castillo-style quad-tree and a
 Pierens-style nearest-neighbour peak matcher) so they can be compared on the
-same data. `hsqc_lcc.py` adds the **Lineshape Correlation Coefficient (LCC)**, a
-method synthesized from all three that discriminates dense protein `1H-15N` HSQC
-fingerprints ~2.6× better than the previous best (see
+same data. `hsqc_lcc.py` adds the **Shift-Tolerant Correlation Coefficient
+(STCC; CLI method `lcc`)**, a method synthesized from all three that discriminates
+dense protein `1H-15N` HSQC fingerprints ~2.6× better than the previous best, plus
+an experimental **Local-Contrast STCC** candidate (see
 [Other methods](#other-methods-and-how-they-compare)).
 
 ## Method
@@ -209,15 +210,15 @@ python3 hsqc_methods.py exp1 exp2 --method nn         # Pierens et al. 2012
   matches each to its nearest neighbour in the other, and maps the average
   peak-to-peak distance `d` to `1/(1+d)`.
 
-`hsqc_lcc.py` implements a fourth method **synthesized from the strengths of the
-other three**:
+`hsqc_lcc.py` implements STCC and an experimental local-contrast variant:
 
 ```bash
 python3 hsqc_lcc.py exp1 exp2 --f2-min 6.5 --f2-max 10 --f1-min 105 --f1-max 130
 python3 hsqc_lcc.py exp1 exp2 --sigma-f2 0.03 --sigma-f1 0.30 --json
+python3 hsqc_lcc.py exp1 exp2 --method local-contrast --json
 ```
 
-- **Lineshape Correlation Coefficient (LCC, this work)** renders each spectrum to
+- **Shift-Tolerant Correlation Coefficient (STCC, this work; `--method lcc`)** renders each spectrum to
   one shared grid, blurs it by the physical NMR linewidth (a Gaussian per axis,
   `sigma = sqrt(linewidth² + expected_drift²)`), then scores the two images with
   the mean-centred normalized cross-correlation (Pearson / ZNCC) at **zero lag**
@@ -231,7 +232,23 @@ python3 hsqc_lcc.py exp1 exp2 --sigma-f2 0.03 --sigma-f1 0.30 --json
   graded shift-tolerance and self-similarity proofs, is in the Supporting Information
   [`doc/LCC_angewandte_SI.md`](doc/LCC_angewandte_SI.md).
 
-All four methods give a self-similarity of exactly 1. On the test data — a base
+- **Local-Contrast STCC (`--method local-contrast`, experimental)** reuses the
+  same rendered and physically blurred image $G$, then computes
+  $H=\sqrt{\max(G,0)}$ and
+  $F=H-\operatorname{GaussianBlur}(H,3\sigma)$. The score is the zero-lag
+  cosine of the two local-contrast features, clipped to $[0,1]$. The square-root
+  transform reduces domination by a few intense peaks, while the fixed
+  $3\sigma$ background removes broad baseline and shared low-frequency density.
+  Square-root weighting has precedent in
+  [mass-spectral library search](https://pubs.acs.org/doi/10.1021/jasms.3c00353),
+  which is a design rationale rather than direct evidence of NMR performance.
+  It adds no alignment, peak picking, dependency, model, or tuning option.
+  A zero feature norm returns 0; non-finite values and non-positive blur or grid
+  steps raise explicit errors.
+  JSON output records `background_factor: 3` and
+  `intensity_transform: "sqrt"`.
+
+All primary methods give a self-similarity of exactly 1. On the test data — a base
 `1H-15N` HSQC compared with the same protein plus ligand (should score high) and
 a *different* protein (should score low) — they separate the two cases very
 differently (`separation` = mean same-protein score − different-protein score;
@@ -243,9 +260,9 @@ differently (`separation` = mean same-protein score − different-protein score;
 | Bin + 45° rotation | 1.00 | 0.82 | 0.57 | 0.25 | 0.20 |
 | Quad-tree (Castillo 2013) | 1.00 | 0.90 | 0.87 | 0.03 | −0.01 |
 | Nearest-neighbour (Pierens 2012) | 1.00 | 0.99 | 0.96 | 0.04 | 0.03 |
-| **LCC (this work)** | 1.00 | **0.94** | **0.18** | **0.75** | **0.71** |
+| **STCC (this work)** | 1.00 | **0.94** | **0.18** | **0.75** | **0.71** |
 
-LCC separates same-protein from different-protein spectra ~2.6× better than the
+STCC separates same-protein from different-protein spectra ~2.6× better than the
 previous best and pushes the different protein (0.18) below *every* same-protein
 score. It beats the bin method across the whole physical blur range (separation
 0.71–0.77 at `sigma` 0.02–0.04 / 0.20–0.40 ppm, still 0.36 even coarsened to the
@@ -257,19 +274,35 @@ small-molecule `1H-13C` HSQC** and for **shift insensitivity**: with the dense
 `1H-15N` amide fingerprint (150+ peaks filling one crowded region) every spectrum
 has a near neighbour for every peak and similar mass-centre structure, so both
 saturate near 1 and barely discriminate. Method choice should follow the regime:
-**LCC for dense protein fingerprints and titration tracking**, bins as a
+**STCC for dense protein fingerprints and titration tracking**, bins as a
 resolution-scanning baseline, tree/nearest-neighbour for sparse small-molecule
-spectra where shift tolerance matters.
+spectra only when raw shift tolerance, rather than global same/different
+discrimination, is the goal.
+
+The experimental local-contrast candidate improves the descriptive separation
+and worst-case margin on both updated benchmarks. Each benchmark uses one fixed
+ppm window for every method; there is no candidate-specific automatic overlap.
+
+| benchmark | STCC sep / margin | Local-Contrast sep / margin |
+| --- | ---: | ---: |
+| Dense: 23 same + 2 decoys | 0.5666 / 0.4051 | **0.6719 / 0.5230** |
+| Sparse: 5 same + 40 different | 0.7447 / 0.3736 | **0.8203 / 0.4336** |
+
+Its representative dense runtime is 1.34× STCC (17.2 vs 12.8 ms per pair).
+On the sparse set, the compound-cluster paired improvement over STCC is 0.0757
+(95% CI 0.0014–0.2057), but both methods already have AUROC/AUPRC/top-1/MRR of
+1.00 and zero leave-one-compound-out error and rejection false-positive rate.
+Because the operational held-out metrics do not improve, `lcc` remains the
+default and `local-contrast` remains experimental.
 
 ### Cross-regime check on `1H-13C` (sparse small molecules)
 
-The same benchmark on **sparse small-molecule `1H-13C` HSQC** — public peak lists for
-six compounds each recorded twice, scoring same-compound pairs against
-different-compound pairs — gives the same ranking: **LCC separates best (0.81)**, bins
-follow (0.69), and the tree and nearest-neighbour methods saturate again (0.39 and 0.10)
-because over a wide window a different molecule still has a near neighbour for every
-peak. Their shift tolerance is real but shows up as tolerating *everything*; LCC recovers
-it controllably through its blur width. Run `python3.11 bench_13c.py`; details in
+The same benchmark on **sparse small-molecule `1H-13C` HSQC** uses five compounds
+recorded twice, scoring 5 same-compound pairs against 40 different-compound pairs.
+Each method now consumes the stick peak list directly and applies its own smoothing;
+this removes the former double blur. STCC separates by 0.7447 (margin 0.3736), while
+the experimental local-contrast candidate reaches 0.8203 (margin 0.4336).
+Run `python3.11 bench_13c.py`; details in
 [`results/comparison_13c.md`](results/comparison_13c.md).
 
 ## References

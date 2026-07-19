@@ -12,7 +12,7 @@ low).
 
 - Window: F2 6.5–10 ppm, F1 105–130 ppm
 - Bin widths: `min_bin_width_f2 = 0.1`, `min_bin_width_f1 = 1.0`
-- LCC blur: `sigma_f2 = 0.03`, `sigma_f1 = 0.30` ppm
+- STCC blur: `sigma_f2 = 0.03`, `sigma_f1 = 0.30` ppm
 
 Raw data: [`method_comparison.csv`](method_comparison.csv),
 [`method_comparison.json`](method_comparison.json). Plot:
@@ -20,7 +20,7 @@ Raw data: [`method_comparison.csv`](method_comparison.csv),
 
 ![method comparison](lcc_comparison.png)
 
-| comparison | bin (Bodis 2009) | bin + 45° | tree (Castillo 2013) | NN (Pierens 2012) | **LCC (this work)** |
+| comparison | bin (Bodis 2009) | bin + 45° | tree (Castillo 2013) | NN (Pierens 2012) | **STCC (this work)** |
 | --- | --- | --- | --- | --- | --- |
 | 2 vs 2 (self) | 1.0000 | 1.0000 | 1.0000 | 1.0000 | **1.0000** |
 | 2 vs 4 (+B12) | 0.8106 | 0.8385 | 0.9401 | 0.9925 | **0.9662** |
@@ -36,28 +36,46 @@ Raw data: [`method_comparison.csv`](method_comparison.csv),
 ## Conclusion
 
 All methods self-score exactly 1. On this **dense protein `1H-15N` amide HSQC** the
-new **Lineshape Correlation Coefficient (LCC)** — mean-centred normalized
+new **Shift-Tolerant Correlation Coefficient (STCC)** — mean-centred normalized
 cross-correlation of physical-linewidth-rendered spectra — separates same-protein
 from different-protein spectra **~2.6× better than the previous best** (0.75 vs the
 bin method's 0.29), and pushes the different protein (0.18) clearly below **every**
 same-protein score. The old bin method left the different protein (0.49) close to
-the worst same-protein point (0.73); LCC opens a wide gap.
+the worst same-protein point (0.73); STCC opens a wide gap.
 
 The bin method is shift-**brittle** (hard bin edges split peaks the titration
 nudges); the tree and nearest-neighbour methods are shift-**blind** (a dense
 fingerprint gives every peak a near neighbour, so both saturate near 1, separation
-≈ 0.03–0.04). LCC sits between: the Gaussian render gives graded shift tolerance (a
+≈ 0.03–0.04). STCC sits between: the Gaussian render gives graded shift tolerance (a
 small titration drift lowers the correlation smoothly), while mean-centring at zero
 lag rewards *co-located* intensity and penalises intensity where the other spectrum
 is empty — so a differently-scattered protein genuinely decorrelates instead of
 finding coincidental near-matches.
 
-**Robustness.** LCC beats the bin method across the whole physical blur range: at
+**Robustness.** STCC beats the bin method across the whole physical blur range: at
 `sigma = 0.02–0.04 / 0.20–0.40` ppm separation is 0.71–0.77, and even coarsened to
 the bin method's own resolution (`0.10 / 1.0`) it still wins (0.36 vs 0.29). The
 separation is not an artefact of one tuned parameter.
 
-Pick the method by regime: **LCC for dense protein fingerprints and titration
-tracking**; the bin method remains a solid resolution-scanning baseline; tree /
-nearest-neighbour suit sparse small-molecule `1H-13C` spectra where shift tolerance
-is the goal.
+Pick the method by regime: **STCC for dense protein fingerprints and titration
+tracking**; the bin method remains a solid resolution-scanning baseline. Tree and
+nearest-neighbour scoring suit sparse `1H-13C` spectra only when raw shift tolerance,
+rather than global same/different discrimination, is the goal.
+
+## Experimental Local-Contrast extension
+
+The expanded dense benchmark (23 PRL3 titration points and two decoy proteins)
+also evaluates `--method local-contrast`. It reuses the STCC render, applies a
+square-root intensity transform and subtracts a fixed-$3\sigma$ Gaussian
+background before the zero-lag cosine:
+
+| method | mean same | min same | OAA | EphB3 | separation | margin |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| STCC (default) | 0.8713 | 0.8195 | 0.1949 | 0.4144 | 0.5666 | 0.4051 |
+| **Local Contrast (experimental)** | 0.7518 | 0.6612 | 0.0215 | 0.1383 | **0.6719** | **0.5230** |
+
+The candidate improves the descriptive separation and margin, at 1.34× the
+representative STCC runtime. It remains experimental because held-out operating
+metrics on the sparse benchmark do not improve over STCC.
+
+Machine-readable expanded dense results: [`nhsqc_dense.json`](nhsqc_dense.json).

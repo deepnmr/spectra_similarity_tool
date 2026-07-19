@@ -1,10 +1,10 @@
 #!/usr/bin/env python3.11
-"""Figure 3: statistical strength (bootstrap CIs) + the mean-centring ablation by regime.
+"""Figure 3: sparse cluster-bootstrap CIs + the mean-centring ablation by regime.
 
-(a) Sparse 1H-13C separation with bootstrap 95% CIs (from retrieval_13c.json): LCC and the bin
-    method overlap (edge within noise), both cleanly above the saturating tree/NN.
-(b) Mean-centring ablation: un-centred cosine vs LCC in each regime -- a large gap on the dense
-    protein fingerprint (0.59->0.75), none on the sparse set (0.78≈0.78).
+(a) Sparse 1H-13C separation with compound-level bootstrap 95% CIs (from retrieval_13c.json),
+    including the experimental Local-Contrast candidate.
+(b) Mean-centring ablation: un-centred cosine vs STCC in each regime -- a large gap on the dense
+    protein fingerprint (0.59->0.75), almost none on the sparse stick set (0.7445≈0.7447).
 
 Colour by entity-class (CVD-safe, consistent with Figs 1-2): proposed = blue, its ablation =
 light blue, strong baseline (bin) = orange, saturating (tree/NN) = grey. Run: python3.11 make_fig3.py
@@ -19,12 +19,13 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 HERE = Path(__file__).parent
-BLUE, LBLUE, ORANGE, GREY = "#2c6fbb", "#6aa0d6", "#e08a1e", "#9aa0a6"
+BLUE, LBLUE, PURPLE, ORANGE, GREY = "#2c6fbb", "#6aa0d6", "#7b4ab0", "#e08a1e", "#9aa0a6"
 
 # (a) sparse separation + 95% CI, from the retrieval/bootstrap harness
 R = json.load(open(HERE / "retrieval_13c.json"))["rows"]
 ROWS = [  # (label, key, colour) sorted high->low separation
-    ("LCC (this work)", "lcc_new", BLUE),
+    ("Local Contrast (experimental)", "local_contrast", PURPLE),
+    ("STCC (this work)", "lcc_new", BLUE),
     ("Cosine, un-centred", "cosine_uncentred", LBLUE),
     ("Bin + 45°", "bin_rot45", ORANGE),
     ("Bin (Bodis 2009)", "bin_Bodis09", ORANGE),
@@ -33,7 +34,8 @@ ROWS = [  # (label, key, colour) sorted high->low separation
 ]
 
 # (b) mean-centring ablation: (regime, cosine sep, lcc sep)
-ABLATION = [("dense $^1$H–$^{15}$N", 0.59, 0.7549), ("sparse $^1$H–$^{13}$C", 0.7773, 0.7778)]
+ABLATION = [("dense $^1$H–$^{15}$N", 0.59, 0.7549),
+            ("sparse $^1$H–$^{13}$C", 0.7444516781, 0.7446607271)]
 
 
 def main() -> None:
@@ -43,7 +45,7 @@ def main() -> None:
     ys = np.arange(len(ROWS))[::-1]  # top row first
     for y, (label, key, col) in zip(ys, ROWS):
         sep = R[key]["sep"]
-        lo, hi = R[key]["ci95"]
+        lo, hi = R[key].get("cluster_ci95", R[key]["ci95"])  # compound-level CI (respects clustering)
         axa.plot([lo, hi], [y, y], color=col, lw=2.4, solid_capstyle="round", zorder=2)
         axa.plot([sep], [y], "o", color=col, ms=8, zorder=3,
                  markeredgecolor="white", markeredgewidth=1.2)
@@ -55,19 +57,13 @@ def main() -> None:
     axa.set_title("(a) Statistical strength", fontsize=10, loc="left")
     axa.axvline(0, color="0.7", lw=0.6)
     axa.grid(axis="x", alpha=0.25)
-    # bracket: LCC and bin CIs overlap
-    axa.annotate("", xy=(0.55, ys[0] - 0.32), xytext=(0.55, ys[3] + 0.32),
-                 arrowprops=dict(arrowstyle="-", color="#b03030", lw=1.0))
-    axa.text(0.50, (ys[0] + ys[3]) / 2, "CIs overlap:\nLCC ≈ bin\n(within noise)",
-             fontsize=7.2, color="#b03030", ha="right", va="center")
-
     # ---- panel (b): mean-centring ablation, grouped bars ----
     x = np.arange(len(ABLATION))
     w = 0.36
     cos = [a[1] for a in ABLATION]
     lcc = [a[2] for a in ABLATION]
     axb.bar(x - w / 2, cos, w, label="un-centred cosine", color=GREY)
-    axb.bar(x + w / 2, lcc, w, label="LCC (mean-centred)", color=BLUE)
+    axb.bar(x + w / 2, lcc, w, label="STCC (mean-centred)", color=BLUE)
     for xi, (c, l) in zip(x, zip(cos, lcc)):
         axb.text(xi - w / 2, c + 0.015, f"{c:.2f}", ha="center", va="bottom", fontsize=8)
         axb.text(xi + w / 2, l + 0.015, f"{l:.2f}", ha="center", va="bottom", fontsize=8)
