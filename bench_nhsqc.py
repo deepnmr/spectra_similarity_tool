@@ -17,7 +17,7 @@ import os
 import statistics
 from pathlib import Path
 
-from bench import _methods, WINDOW  # same 6 methods, same 6.5-10 x 105-130 ppm window
+from bench import _methods, WINDOW  # same methods, same 6.5-10 x 105-130 ppm window
 from hsqc_similarity import read_bruker_2d
 
 HERE = Path(__file__).parent
