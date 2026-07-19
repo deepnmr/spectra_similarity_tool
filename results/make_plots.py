@@ -1,9 +1,12 @@
 #!/usr/bin/env python3.11
 """Regenerate the benchmark figures from the JSON the harnesses write.
 
-- comparison_13c.png : separation + margin per method on the sparse 1H-13C regime
+- comparison_13c.png : separation + margin for the primary methods on sparse 1H-13C
                        (read live from comparison_13c.json).
-- comparison_all.png : separation across BOTH regimes for every method.
+- comparison_all.png : primary-method separation across BOTH regimes.
+
+The post hoc Local-Contrast candidate is reported in tables because it was evaluated on the
+expanded 23+2 dense benchmark, not the legacy dense benchmark used by this figure.
 
 The dense 1H-15N numbers come from the published protein run (method_comparison.json is
 not regenerable here without the private Bruker data); the un-centred-cosine protein
@@ -40,7 +43,7 @@ LABELS = {
     "tree_Castillo13": "Tree (Castillo 2013)",
     "nn_Pierens12": "NN (Pierens 2012)",
     "cosine_uncentred": "Cosine (un-centred)",
-    "lcc_new": "LCC (this work)",
+    "lcc_new": "STCC (this work)",
 }
 ORDER = ["bin_Bodis09", "bin_rot45", "tree_Castillo13", "nn_Pierens12", "cosine_uncentred", "lcc_new"]
 

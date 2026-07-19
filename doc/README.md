@@ -1,8 +1,13 @@
 # Source papers
 
-The Lineshape Correlation Coefficient method (this work) is documented in full, with
+The Shift-Tolerant Correlation Coefficient method (this work) is documented in full, with
 equations and proofs, in the Angewandte manuscript [`LCC_angewandte.md`](LCC_angewandte.md)
 and its Supporting Information [`LCC_angewandte_SI.md`](LCC_angewandte_SI.md).
+
+The documents also report the experimental Local-Contrast STCC option added in
+`hsqc_lcc.py`: a square-root intensity transform followed by fixed-$3\sigma$
+local background subtraction. STCC (`--method lcc`) remains the default pending
+an improvement in held-out threshold error or rejection false-positive rate.
 
 The methods in this repository come from the following papers. Only the
 open-access one is stored here; the two Elsevier papers are kept locally but

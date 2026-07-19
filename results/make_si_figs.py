@@ -1,14 +1,14 @@
 #!/usr/bin/env python3.11
-"""Method-explainer figures for the Supporting Information (real LCC math on toy spectra).
+"""Method-explainer figures for the Supporting Information (real STCC math on toy spectra).
 
 Ten figures, numbered by their position in the SI (S1..S10):
 
 - si_baseline.png      (S1, §S1)  : clip vs abs on an edited HSQC -- clip deletes CH2, abs keeps it.
 - si_sharedgrid.png    (S2, §S2)  : two native resolutions rendered onto one shared grid.
 - si_blur.png          (S3, §S3)  : blur width sigma = linewidth (+) drift in quadrature.
-- si_pipeline.png      (S4, §S4)  : the four LCC steps end-to-end (render->blur->centre->score).
-- si_failuremodes.png  (S5, §S6)  : brittle (bin) vs blind (tree/NN) vs clean gap (LCC), real numbers.
-- si_shifttol.png      (S6, §S6a) : graded (LCC) vs brittle (bin) response to a shift.
+- si_pipeline.png      (S4, §S4)  : the four STCC steps end-to-end (render->blur->centre->score).
+- si_failuremodes.png  (S5, §S6)  : brittle (bin) vs blind (tree/NN) vs clean gap (STCC), real numbers.
+- si_shifttol.png      (S6, §S6a) : graded (STCC) vs brittle (bin) response to a shift.
 - si_sigma.png         (S7, §S6a) : sigma is the single tolerance knob.
 - si_meancentre.png    (S8, §S6b) : mean-centring turns a non-co-located peak into a negative product.
 - si_zerolag.png       (S9, §S6c) : zero lag vs a global shift search (false registration).
@@ -126,7 +126,7 @@ def fig_pipeline():
                                        mutation_scale=12, color="0.4", arrowstyle="-|>"))
     fig.add_artist(FancyArrowPatch((0.635, 0.5), (0.70, 0.5), transform=fig.transFigure,
                                    mutation_scale=15, color=RED, arrowstyle="-|>"))
-    fig.suptitle("The LCC pipeline: render → blur → mean-centre → correlate at zero lag",
+    fig.suptitle("The STCC pipeline: render → blur → mean-centre → correlate at zero lag",
                  fontsize=11.5, y=1.0)
     fig.savefig(HERE / "si_pipeline.png", dpi=200, bbox_inches="tight")
     plt.close(fig)
@@ -144,7 +144,7 @@ def fig_meancentre():
     Y = g(3.05) + g(5.0)
 
     fig, axes = plt.subplots(3, 2, figsize=(9.4, 5.0), sharex=True)
-    for col, (title, cen) in enumerate([("LCC: mean-centred", True), ("cosine: un-centred", False)]):
+    for col, (title, cen) in enumerate([("STCC: mean-centred", True), ("cosine: un-centred", False)]):
         Xh = X - X.mean() if cen else X
         Yh = Y - Y.mean() if cen else Y
         prod = Xh * Yh
@@ -179,7 +179,7 @@ def fig_meancentre():
 
 
 # --------------------------------------------------------------------------- #
-# Figure S3 : graded (LCC) vs brittle (bin) response to a shift
+# Figure S3 : graded (STCC) vs brittle (bin) response to a shift
 # --------------------------------------------------------------------------- #
 def fig_shifttol():
     fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(9.4, 3.8), gridspec_kw=dict(width_ratios=[1, 1.15]))
@@ -201,7 +201,7 @@ def fig_shifttol():
     ax0.set_title("(a) Hard bin edges are brittle", fontsize=10, loc="left")
     ax0.set_ylim(0, 1.18); ax0.set_yticks([]); ax0.set_xlabel("chemical shift (a.u.)", fontsize=9)
 
-    # (b) similarity vs displacement: smooth LCC vs discontinuous bin
+    # (b) similarity vs displacement: smooth STCC vs discontinuous bin
     d = np.linspace(0, 1.5, 400)
     sigma = 0.4
     lcc = np.exp(-(d ** 2) / (4 * sigma ** 2))
@@ -210,7 +210,7 @@ def fig_shifttol():
     binw = 0.5
     step = np.floor(d / binw)
     binsim = np.clip(0.95 - 0.10 * (d - step * binw) / binw - 0.33 * step, 0, 1)
-    ax1.plot(d, lcc, color=BLUE, lw=2.4, label="LCC (Gaussian blur)")
+    ax1.plot(d, lcc, color=BLUE, lw=2.4, label="STCC (Gaussian blur)")
     for seg in range(3):
         m = (d >= seg * binw) & (d < (seg + 1) * binw)
         ax1.plot(d[m], binsim[m], color=ORANGE, lw=2.2)
@@ -227,7 +227,7 @@ def fig_shifttol():
     ax1.set_ylim(-0.02, 1.05); ax1.legend(fontsize=8, loc="upper right")
     ax1.grid(alpha=0.25)
 
-    fig.suptitle("Graded shift tolerance: LCC decays smoothly where the bin method jumps",
+    fig.suptitle("Graded shift tolerance: STCC decays smoothly where the bin method jumps",
                  fontsize=10.5, y=1.0)
     fig.tight_layout()
     fig.savefig(HERE / "si_shifttol.png", dpi=200, bbox_inches="tight")
@@ -380,18 +380,18 @@ def fig_failuremodes():
         "Bin\n(Bodis)":       [0.8106, 0.7739, 0.8274, 0.8164, 0.7637, 0.7320],
         "Tree\n(Castillo)":   [0.9401, 0.8619, 0.9443, 0.9179, 0.8760, 0.8624],
         "NN\n(Pierens)":      [0.9925, 0.9981, 0.9877, 0.9848, 0.9978, 0.9851],
-        "LCC\n(this work)":   [0.9662, 0.9594, 0.9485, 0.8972, 0.9558, 0.8911],
+        "STCC\n(this work)":   [0.9662, 0.9594, 0.9485, 0.8972, 0.9558, 0.8911],
     }
     diff = {"Bin\n(Bodis)": 0.4949, "Tree\n(Castillo)": 0.8721,
-            "NN\n(Pierens)": 0.9550, "LCC\n(this work)": 0.1815}
+            "NN\n(Pierens)": 0.9550, "STCC\n(this work)": 0.1815}
     tags = {"Bin\n(Bodis)": ("brittle", ORANGE), "Tree\n(Castillo)": ("blind", GREY),
-            "NN\n(Pierens)": ("blind", GREY), "LCC\n(this work)": ("clean gap", BLUE)}
+            "NN\n(Pierens)": ("blind", GREY), "STCC\n(this work)": ("clean gap", BLUE)}
 
     fig, ax = plt.subplots(figsize=(8.4, 4.4))
     xs = np.arange(len(same))
     for i, m in enumerate(same):
         lo, hi = min(same[m]), max(same[m])
-        col = BLUE if m.startswith("LCC") else "0.55"
+        col = BLUE if m.startswith("STCC") else "0.55"
         # same-compound range as a vertical band
         ax.add_patch(plt.Rectangle((i - 0.16, lo), 0.32, hi - lo, color=col, alpha=0.35, zorder=2))
         ax.plot([i - 0.16, i + 0.16], [np.mean(same[m])] * 2, color=col, lw=1.5, zorder=3)
@@ -412,7 +412,7 @@ def fig_failuremodes():
     ax.legend(fontsize=8, loc="lower left", frameon=True)
     ax.grid(axis="y", alpha=0.25)
     ax.set_title("Two opposite failures: the bin method is shift-brittle, tree/NN are shift-blind; "
-                 "only LCC pushes\nthe different protein below every same-protein score",
+                 "only STCC pushes\nthe different protein below every same-protein score",
                  fontsize=9.8)
     fig.tight_layout()
     fig.savefig(HERE / "si_failuremodes.png", dpi=200, bbox_inches="tight")
@@ -525,7 +525,7 @@ def fig_gridinvariance():
     ax.text(px_per_sigma.max() * 0.6, min(scores.max(), 0.99) - 0.06,
             "score flat: grid-invariant", color=BLUE, fontsize=8, ha="center")
     ax.set_xlabel("pixels per $\\sigma$ (render resolution)", fontsize=9.5)
-    ax.set_ylabel("LCC score (fixed toy pair)", fontsize=9.5)
+    ax.set_ylabel("STCC score (fixed toy pair)", fontsize=9.5)
     ax.set_ylim(0, 1.02); ax.grid(alpha=0.25)
     ax.set_title("The render grid is a discretization, not a parameter: the score is flat while $\\geq 3$ px per $\\sigma$",
                  fontsize=9.5)
