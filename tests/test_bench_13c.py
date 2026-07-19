@@ -2,9 +2,10 @@ import json
 import tempfile
 from pathlib import Path
 
+import numpy as np
 import pytest
 
-from bench_13c import _assert_distinct, load_peaklist
+from bench_13c import METHODS, _assert_distinct, load_peaklist
 from hsqc_lcc import lcc_similarity
 
 
@@ -23,11 +24,16 @@ def _write_peaklist(peaks):
     return Path(f.name)
 
 
+def test_sparse_registry_exposes_local_contrast():
+    assert "local_contrast" in METHODS
+
+
 def test_loader_places_peaks_and_ignores_sign():
     # A negative intensity (edited-HSQC CH2) must still render a peak (uses |intensity|).
     path = _write_peaklist([(3.26, 71.1, 2.4), (1.86, 44.9, -1.9)])
     spec = load_peaklist(path)
-    # both peaks present as positive intensity in the rendered image
+    # Loader returns sticks; each similarity method owns its blur/tolerance processing.
+    assert np.count_nonzero(spec.intensity) == 2
     assert spec.intensity.max() > 0
     i_h = int(round(3.26 / 0.01))
     i_c = int(round(71.1 / 0.10))

@@ -3,12 +3,12 @@
 
 Complements bench.py (dense protein 1H-15N) with the sparse small-molecule 1H-13C
 regime the tree/NN methods were designed for. Data: public HSQC peak lists from the
-simpleNMR example set (EricHughesABC/simpleNMR) — six compounds each recorded twice
-(a variant pair, e.g. menthol in two solvents), giving 12 spectra. A good measure
-scores the 6 same-compound pairs HIGH and the 60 different-compound pairs LOW.
+simpleNMR example set (EricHughesABC/simpleNMR) — five compounds each recorded twice
+(a variant pair, e.g. menthol in two solvents), giving 10 spectra. A good measure
+scores the 5 same-compound pairs HIGH and the 40 different-compound pairs LOW.
 
-The peak lists are rasterized to a synthetic 2D spectrum (one Gaussian per peak) so
-the existing Spectrum2D methods run unchanged. Run with python3.11 (numpy/matplotlib).
+The peak lists are rasterized to a synthetic 2D stick spectrum so each method applies
+its own shift-tolerance processing. Run with python3.11 (numpy/matplotlib).
 The peak-list data are downloaded on first run (not redistributed here).
 """
 from __future__ import annotations
@@ -21,7 +21,7 @@ import numpy as np
 
 from hsqc_similarity import Spectrum2D, hsqc_similarity
 from hsqc_methods import nn_peak_similarity, quadtree_similarity
-from hsqc_lcc import lcc_similarity, cosine_similarity
+from hsqc_lcc import cosine_similarity, lcc_similarity, local_contrast_similarity
 
 RAW = "https://raw.githubusercontent.com/EricHughesABC/simpleNMR/main/exampleProblems"
 # local_name -> (folder, remote_filename); two backups store the json under the compound name.
@@ -42,7 +42,6 @@ PAIRS = [
 # Common grid over small-molecule 1H-13C HSQC. 1H direct (F2), 13C indirect (F1).
 H_LO, H_HI, H_STEP = 0.0, 10.0, 0.01
 C_LO, C_HI, C_STEP = 0.0, 165.0, 0.10
-SIG_H, SIG_C = 0.03, 0.5  # render linewidth in ppm
 WIN = dict(range_f2=(H_LO, H_HI), range_f1=(C_LO, C_HI))
 
 METHODS = {
@@ -51,6 +50,7 @@ METHODS = {
     "tree_Castillo13": lambda x, y: quadtree_similarity(x, y, **WIN)["similarity"],
     "nn_Pierens12": lambda x, y: nn_peak_similarity(x, y, **WIN)["similarity"],
     "lcc_new":      lambda x, y: lcc_similarity(x, y, sigma_f2=0.05, sigma_f1=0.5, step_f2=0.02, step_f1=0.2, **WIN)["similarity"],
+    "local_contrast": lambda x, y: local_contrast_similarity(x, y, sigma_f2=0.05, sigma_f1=0.5, step_f2=0.02, step_f1=0.2, **WIN)["similarity"],
     # Ablation baseline: same render/blur as LCC but WITHOUT mean-centring (un-centred cosine /
     # contrast angle). Isolates what mean-centring buys -- see the ablation in the SI.
     "cosine_uncentred": lambda x, y: cosine_similarity(x, y, sigma_f2=0.05, sigma_f1=0.5, step_f2=0.02, step_f1=0.2, **WIN)["similarity"],
@@ -84,16 +84,7 @@ def load_peaklist(path: Path) -> Spectrum2D:
         inten = abs(float(hs["intensity"][k]))  # sign encodes CH2 multiplicity, not absence
         if H_LO <= h <= H_HI and C_LO <= c <= C_HI:
             img[int(round((c - C_LO) / C_STEP)), int(round((h - H_LO) / H_STEP))] += inten
-    img = _blur(_blur(img, SIG_C / C_STEP, 0), SIG_H / H_STEP, 1)
     return Spectrum2D(ppm_f2=ppm_h, ppm_f1=ppm_c, intensity=img, source=path)
-
-
-def _blur(m, sig_px, axis):
-    r = max(1, int(round(3 * sig_px)))
-    x = np.arange(-r, r + 1)
-    k = np.exp(-0.5 * (x / sig_px) ** 2)
-    k /= k.sum()
-    return np.apply_along_axis(lambda row: np.convolve(row, k, mode="same"), axis, m)
 
 
 def _assert_distinct(specs: dict, same: list) -> None:

@@ -29,7 +29,6 @@ from __future__ import annotations
 import argparse
 import json
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Iterable
 
 import numpy as np
@@ -126,10 +125,12 @@ def lcc_similarity(
     ``center=False`` gives the un-centred cosine (contrast-angle) ablation of the same
     rendered/blurred images -- see ``cosine_similarity``."""
     range_f2, range_f1 = _overlap_ranges(spectrum_x, spectrum_y, range_f2, range_f1)
-    render = lambda s: render_image(
-        s, range_f2, range_f1, sigma_f2=sigma_f2, sigma_f1=sigma_f1,
-        step_f2=step_f2, step_f1=step_f1, baseline=baseline, intensity_p=intensity_p,
-    )
+    def render(spectrum):
+        return render_image(
+            spectrum, range_f2, range_f1, sigma_f2=sigma_f2, sigma_f1=sigma_f1,
+            step_f2=step_f2, step_f1=step_f1, baseline=baseline, intensity_p=intensity_p,
+        )
+
     img_x = render(spectrum_x)
     img_y = render(spectrum_y)
     similarity = _zncc(img_x.image, img_y.image, center=center)
@@ -159,12 +160,82 @@ def cosine_similarity(spectrum_x: Spectrum2D, spectrum_y: Spectrum2D, **kwargs) 
     return lcc_similarity(spectrum_x, spectrum_y, center=False, **kwargs)
 
 
+def _local_contrast_feature(
+    rendered: RenderedImage, sigma_f2: float, sigma_f1: float
+) -> np.ndarray:
+    high = np.sqrt(np.maximum(rendered.image, 0.0))
+    background = high
+    for sigma, step, axis in (
+        (sigma_f2, rendered.step_f2, 1),
+        (sigma_f1, rendered.step_f1, 0),
+    ):
+        background = _smooth_axis(
+            background, _gaussian_kernel(3.0 * sigma / step), axis=axis
+        )
+    return high - background
+
+
+def local_contrast_similarity(
+    spectrum_x: Spectrum2D,
+    spectrum_y: Spectrum2D,
+    range_f2: tuple[float, float] | None = None,
+    range_f1: tuple[float, float] | None = None,
+    sigma_f2: float = 0.03,
+    sigma_f1: float = 0.30,
+    step_f2: float = 0.01,
+    step_f1: float = 0.10,
+    baseline: str = "clip",
+) -> dict[str, object]:
+    """Experimental sqrt/DoG local-contrast score on the existing LCC render."""
+    for name, value in (
+        ("sigma_f2", sigma_f2), ("sigma_f1", sigma_f1),
+        ("step_f2", step_f2), ("step_f1", step_f1),
+    ):
+        if not np.isfinite(value) or value <= 0:
+            raise ValueError(f"{name} must be finite and greater than zero")
+    for name, supplied in (("range_f2", range_f2), ("range_f1", range_f1)):
+        if supplied is not None and not np.all(np.isfinite(supplied)):
+            raise ValueError(f"{name} must contain only finite values")
+    for label, spectrum in (("spectrum_x", spectrum_x), ("spectrum_y", spectrum_y)):
+        if not all(np.all(np.isfinite(values)) for values in
+                   (spectrum.ppm_f2, spectrum.ppm_f1, spectrum.intensity)):
+            raise ValueError(f"{label} must contain only finite values")
+
+    range_f2, range_f1 = _overlap_ranges(spectrum_x, spectrum_y, range_f2, range_f1)
+    def render(spectrum):
+        return render_image(
+            spectrum, range_f2, range_f1, sigma_f2=sigma_f2, sigma_f1=sigma_f1,
+            step_f2=step_f2, step_f1=step_f1, baseline=baseline,
+        )
+
+    image_x, image_y = render(spectrum_x), render(spectrum_y)
+    feature_x = _local_contrast_feature(image_x, sigma_f2, sigma_f1)
+    feature_y = _local_contrast_feature(image_y, sigma_f2, sigma_f1)
+
+    return {
+        "method": "local-contrast",
+        "similarity": _zncc(feature_x, feature_y, center=False),
+        "sigma_f2": float(sigma_f2),
+        "sigma_f1": float(sigma_f1),
+        "step_f2": float(image_x.step_f2),
+        "step_f1": float(image_x.step_f1),
+        "grid": [int(image_x.image.shape[0]), int(image_x.image.shape[1])],
+        "range_f2": [float(range_f2[0]), float(range_f2[1])],
+        "range_f1": [float(range_f1[0]), float(range_f1[1])],
+        "background_factor": 3,
+        "intensity_transform": "sqrt",
+        "source_x": str(spectrum_x.source),
+        "source_y": str(spectrum_y.source),
+    }
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        description="Lineshape Correlation Coefficient (LCC) similarity of two Bruker 2D HSQC spectra."
+        description="LCC or experimental local-contrast similarity of two Bruker 2D HSQC spectra."
     )
     p.add_argument("spectrum_x", help="Bruker experiment directory, pdata directory, or 2rr file")
     p.add_argument("spectrum_y", help="Bruker experiment directory, pdata directory, or 2rr file")
+    p.add_argument("--method", choices=["lcc", "local-contrast"], default="lcc")
     p.add_argument("--procno", type=int, default=None)
     p.add_argument("--f2-min", type=float, default=None)
     p.add_argument("--f2-max", type=float, default=None)
@@ -174,7 +245,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--sigma-f1", type=float, default=0.30, help="15N/13C lineshape+drift blur sigma in ppm")
     p.add_argument("--step-f2", type=float, default=0.01, help="F2 render pixel width in ppm")
     p.add_argument("--step-f1", type=float, default=0.10, help="F1 render pixel width in ppm")
-    p.add_argument("--p", type=float, default=1.0, help="Intensity compression exponent (1.0 = off)")
+    p.add_argument("--p", type=float, default=1.0, help="LCC intensity exponent (1.0 = off)")
     p.add_argument("--baseline", choices=["clip", "abs", "shift", "none"], default="clip")
     p.add_argument("--json", action="store_true")
     return p
@@ -194,16 +265,18 @@ def main(argv: Iterable[str] | None = None) -> int:
     range_f1 = _paired(args.f1_min, args.f1_max, "f1")
     x = read_bruker_2d(args.spectrum_x, procno=args.procno)
     y = read_bruker_2d(args.spectrum_y, procno=args.procno)
-    result = lcc_similarity(
+    similarity = lcc_similarity if args.method == "lcc" else local_contrast_similarity
+    extra = {"intensity_p": args.p} if args.method == "lcc" else {}
+    result = similarity(
         x, y, range_f2=range_f2, range_f1=range_f1,
         sigma_f2=args.sigma_f2, sigma_f1=args.sigma_f1,
         step_f2=args.step_f2, step_f1=args.step_f1,
-        baseline=args.baseline, intensity_p=args.p,
+        baseline=args.baseline, **extra,
     )
     if args.json:
         print(json.dumps(result, indent=2))
     else:
-        print(f"method: lcc")
+        print(f"method: {result['method']}")
         print(f"similarity: {result['similarity']:.6f}")
         print(f"grid: {result['grid'][0]}x{result['grid'][1]}  "
               f"sigma: {result['sigma_f2']}/{result['sigma_f1']} ppm")

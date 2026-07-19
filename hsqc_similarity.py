@@ -149,7 +149,11 @@ def _gaussian_kernel(sigma_points: float) -> np.ndarray | None:
 
 def _smooth_axis(matrix: np.ndarray, kernel: np.ndarray, axis: int) -> np.ndarray:
     return np.apply_along_axis(
-        lambda row: np.convolve(row, kernel, mode="same"), axis, matrix
+        lambda row: np.convolve(row, kernel, mode="full")[
+            kernel.size // 2 : kernel.size // 2 + row.size
+        ],
+        axis,
+        matrix,
     )
 
 
