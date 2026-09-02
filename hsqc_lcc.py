@@ -33,7 +33,7 @@ from typing import Iterable
 
 import numpy as np
 
-from hsqc_similarity import _gaussian_kernel, _smooth_axis, read_bruker_2d, Spectrum2D
+from hsqc_similarity import _gaussian_kernel, _paired_range, _smooth_axis, read_bruker_2d, Spectrum2D
 from hsqc_methods import _overlap_ranges, _window
 
 
@@ -42,6 +42,8 @@ class RenderedImage:
     image: np.ndarray  # blurred, shape (n1, n2) with F1 rows, F2 cols
     step_f2: float     # ppm per pixel along F2
     step_f1: float     # ppm per pixel along F1
+    sigma_f2: float    # blur sigma in ppm along F2
+    sigma_f1: float    # blur sigma in ppm along F1
 
 
 def render_image(
@@ -85,7 +87,7 @@ def render_image(
     if kernel_f1 is not None:
         image = _smooth_axis(image, kernel_f1, axis=0)
 
-    return RenderedImage(image=image, step_f2=dx2, step_f1=dx1)
+    return RenderedImage(image=image, step_f2=dx2, step_f1=dx1, sigma_f2=sigma_f2, sigma_f1=sigma_f1)
 
 
 def _zncc(a: np.ndarray, b: np.ndarray, center: bool = True) -> float:
@@ -107,6 +109,31 @@ def _zncc(a: np.ndarray, b: np.ndarray, center: bool = True) -> float:
     return min(1.0, max(0.0, float(np.sum(ah * bh) / denom)))
 
 
+def _render_pair(spectrum_x, spectrum_y, range_f2, range_f1, **render_kw):
+    """Resolve the common window and render both spectra onto the same grid."""
+    range_f2, range_f1 = _overlap_ranges(spectrum_x, spectrum_y, range_f2, range_f1)
+    img_x = render_image(spectrum_x, range_f2, range_f1, **render_kw)
+    img_y = render_image(spectrum_y, range_f2, range_f1, **render_kw)
+    return img_x, img_y, range_f2, range_f1
+
+
+def _report(method, similarity, img, range_f2, range_f1, spectrum_x, spectrum_y, **extra):
+    return {
+        "method": method,
+        "similarity": float(similarity),
+        "sigma_f2": float(img.sigma_f2),
+        "sigma_f1": float(img.sigma_f1),
+        "step_f2": float(img.step_f2),
+        "step_f1": float(img.step_f1),
+        **extra,
+        "grid": [int(img.image.shape[0]), int(img.image.shape[1])],
+        "range_f2": [float(range_f2[0]), float(range_f2[1])],
+        "range_f1": [float(range_f1[0]), float(range_f1[1])],
+        "source_x": str(spectrum_x.source),
+        "source_y": str(spectrum_y.source),
+    }
+
+
 def lcc_similarity(
     spectrum_x: Spectrum2D,
     spectrum_y: Spectrum2D,
@@ -124,31 +151,14 @@ def lcc_similarity(
 
     ``center=False`` gives the un-centred cosine (contrast-angle) ablation of the same
     rendered/blurred images -- see ``cosine_similarity``."""
-    range_f2, range_f1 = _overlap_ranges(spectrum_x, spectrum_y, range_f2, range_f1)
-    def render(spectrum):
-        return render_image(
-            spectrum, range_f2, range_f1, sigma_f2=sigma_f2, sigma_f1=sigma_f1,
-            step_f2=step_f2, step_f1=step_f1, baseline=baseline, intensity_p=intensity_p,
-        )
-
-    img_x = render(spectrum_x)
-    img_y = render(spectrum_y)
-    similarity = _zncc(img_x.image, img_y.image, center=center)
-
-    return {
-        "method": "lcc" if center else "cosine",
-        "similarity": float(similarity),
-        "sigma_f2": float(sigma_f2),
-        "sigma_f1": float(sigma_f1),
-        "step_f2": float(img_x.step_f2),
-        "step_f1": float(img_x.step_f1),
-        "intensity_p": float(intensity_p),
-        "grid": [int(img_x.image.shape[0]), int(img_x.image.shape[1])],
-        "range_f2": [float(range_f2[0]), float(range_f2[1])],
-        "range_f1": [float(range_f1[0]), float(range_f1[1])],
-        "source_x": str(spectrum_x.source),
-        "source_y": str(spectrum_y.source),
-    }
+    img_x, img_y, range_f2, range_f1 = _render_pair(
+        spectrum_x, spectrum_y, range_f2, range_f1, sigma_f2=sigma_f2, sigma_f1=sigma_f1,
+        step_f2=step_f2, step_f1=step_f1, baseline=baseline, intensity_p=intensity_p,
+    )
+    return _report(
+        "lcc" if center else "cosine", _zncc(img_x.image, img_y.image, center=center),
+        img_x, range_f2, range_f1, spectrum_x, spectrum_y, intensity_p=float(intensity_p),
+    )
 
 
 def cosine_similarity(spectrum_x: Spectrum2D, spectrum_y: Spectrum2D, **kwargs) -> dict[str, object]:
@@ -160,14 +170,12 @@ def cosine_similarity(spectrum_x: Spectrum2D, spectrum_y: Spectrum2D, **kwargs) 
     return lcc_similarity(spectrum_x, spectrum_y, center=False, **kwargs)
 
 
-def _local_contrast_feature(
-    rendered: RenderedImage, sigma_f2: float, sigma_f1: float
-) -> np.ndarray:
+def _local_contrast_feature(rendered: RenderedImage) -> np.ndarray:
     high = np.sqrt(np.maximum(rendered.image, 0.0))
     background = high
     for sigma, step, axis in (
-        (sigma_f2, rendered.step_f2, 1),
-        (sigma_f1, rendered.step_f1, 0),
+        (rendered.sigma_f2, rendered.step_f2, 1),
+        (rendered.sigma_f1, rendered.step_f1, 0),
     ):
         background = _smooth_axis(
             background, _gaussian_kernel(3.0 * sigma / step), axis=axis
@@ -201,32 +209,15 @@ def local_contrast_similarity(
                    (spectrum.ppm_f2, spectrum.ppm_f1, spectrum.intensity)):
             raise ValueError(f"{label} must contain only finite values")
 
-    range_f2, range_f1 = _overlap_ranges(spectrum_x, spectrum_y, range_f2, range_f1)
-    def render(spectrum):
-        return render_image(
-            spectrum, range_f2, range_f1, sigma_f2=sigma_f2, sigma_f1=sigma_f1,
-            step_f2=step_f2, step_f1=step_f1, baseline=baseline,
-        )
-
-    image_x, image_y = render(spectrum_x), render(spectrum_y)
-    feature_x = _local_contrast_feature(image_x, sigma_f2, sigma_f1)
-    feature_y = _local_contrast_feature(image_y, sigma_f2, sigma_f1)
-
-    return {
-        "method": "local-contrast",
-        "similarity": _zncc(feature_x, feature_y, center=False),
-        "sigma_f2": float(sigma_f2),
-        "sigma_f1": float(sigma_f1),
-        "step_f2": float(image_x.step_f2),
-        "step_f1": float(image_x.step_f1),
-        "grid": [int(image_x.image.shape[0]), int(image_x.image.shape[1])],
-        "range_f2": [float(range_f2[0]), float(range_f2[1])],
-        "range_f1": [float(range_f1[0]), float(range_f1[1])],
-        "background_factor": 3,
-        "intensity_transform": "sqrt",
-        "source_x": str(spectrum_x.source),
-        "source_y": str(spectrum_y.source),
-    }
+    img_x, img_y, range_f2, range_f1 = _render_pair(
+        spectrum_x, spectrum_y, range_f2, range_f1, sigma_f2=sigma_f2, sigma_f1=sigma_f1,
+        step_f2=step_f2, step_f1=step_f1, baseline=baseline,
+    )
+    similarity = _zncc(_local_contrast_feature(img_x), _local_contrast_feature(img_y), center=False)
+    return _report(
+        "local-contrast", similarity, img_x, range_f2, range_f1, spectrum_x, spectrum_y,
+        background_factor=3, intensity_transform="sqrt",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -251,18 +242,10 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
-def _paired(lo, hi, name):
-    if lo is None and hi is None:
-        return None
-    if lo is None or hi is None:
-        raise SystemExit(f"--{name}-min and --{name}-max must be supplied together")
-    return (lo, hi)
-
-
 def main(argv: Iterable[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    range_f2 = _paired(args.f2_min, args.f2_max, "f2")
-    range_f1 = _paired(args.f1_min, args.f1_max, "f1")
+    range_f2 = _paired_range(args.f2_min, args.f2_max, "f2")
+    range_f1 = _paired_range(args.f1_min, args.f1_max, "f1")
     x = read_bruker_2d(args.spectrum_x, procno=args.procno)
     y = read_bruker_2d(args.spectrum_y, procno=args.procno)
     similarity = lcc_similarity if args.method == "lcc" else local_contrast_similarity
