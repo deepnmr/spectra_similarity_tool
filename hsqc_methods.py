@@ -28,7 +28,7 @@ from typing import Iterable
 
 import numpy as np
 
-from hsqc_similarity import Spectrum2D, _axis_spacing, read_bruker_2d
+from hsqc_similarity import Spectrum2D, _axis_spacing, _overlap_range, _paired_range, read_bruker_2d
 
 
 # --------------------------------------------------------------------------- #
@@ -83,19 +83,9 @@ def _overlap_ranges(
     range_f2: tuple[float, float] | None,
     range_f1: tuple[float, float] | None,
 ) -> tuple[tuple[float, float], tuple[float, float]]:
-    def common(ax, ay, supplied, label):
-        if supplied is not None:
-            lo, hi = sorted(supplied)
-        else:
-            lo = max(float(np.min(ax)), float(np.min(ay)))
-            hi = min(float(np.max(ax)), float(np.max(ay)))
-        if hi <= lo:
-            raise ValueError(f"The two spectra do not overlap in {label}")
-        return lo, hi
-
     return (
-        common(x.ppm_f2, y.ppm_f2, range_f2, "F2"),
-        common(x.ppm_f1, y.ppm_f1, range_f1, "F1"),
+        _overlap_range(x.ppm_f2, y.ppm_f2, range_f2, "F2"),
+        _overlap_range(x.ppm_f1, y.ppm_f1, range_f1, "F1"),
     )
 
 
@@ -358,27 +348,16 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _paired(lo, hi, name):
-    if lo is None and hi is None:
-        return None
-    if lo is None or hi is None:
-        raise SystemExit(f"--{name}-min and --{name}-max must be supplied together")
-    return (lo, hi)
-
-
 def main(argv: Iterable[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    range_f2 = _paired(args.f2_min, args.f2_max, "f2")
-    range_f1 = _paired(args.f1_min, args.f1_max, "f1")
+    range_f2 = _paired_range(args.f2_min, args.f2_max, "f2")
+    range_f1 = _paired_range(args.f1_min, args.f1_max, "f1")
     x = read_bruker_2d(args.spectrum_x, procno=args.procno)
     y = read_bruker_2d(args.spectrum_y, procno=args.procno)
 
-    if args.method == "quadtree":
-        kw = {} if args.threshold_frac is None else {"threshold_frac": args.threshold_frac}
-        result = quadtree_similarity(x, y, range_f2=range_f2, range_f1=range_f1, baseline=args.baseline, **kw)
-    else:
-        kw = {} if args.threshold_frac is None else {"threshold_frac": args.threshold_frac}
-        result = nn_peak_similarity(x, y, range_f2=range_f2, range_f1=range_f1, baseline=args.baseline, **kw)
+    similarity = quadtree_similarity if args.method == "quadtree" else nn_peak_similarity
+    kw = {} if args.threshold_frac is None else {"threshold_frac": args.threshold_frac}
+    result = similarity(x, y, range_f2=range_f2, range_f1=range_f1, baseline=args.baseline, **kw)
 
     if args.json:
         print(json.dumps(result, indent=2))
