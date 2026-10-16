@@ -18,7 +18,7 @@ from pathlib import Path
 
 from hsqc_similarity import hsqc_similarity, read_bruker_2d
 from hsqc_methods import nn_peak_similarity, quadtree_similarity
-from hsqc_lcc import cosine_similarity, lcc_similarity, local_contrast_similarity
+from hsqc_lcc import cosine_similarity, echos_similarity, lcc_similarity, local_contrast_similarity
 
 WINDOW = dict(range_f2=(6.5, 10.0), range_f1=(105.0, 130.0))
 SAME = [4, 6, 8, 10, 12, 14]  # PRL3 + ligand titration
@@ -34,6 +34,8 @@ def _methods():
         "nn_Pierens12": lambda x, y: nn_peak_similarity(x, y, **WINDOW)["similarity"],
         "lcc_new": lambda x, y: lcc_similarity(x, y, **WINDOW)["similarity"],
         "local_contrast": lambda x, y: local_contrast_similarity(x, y, **WINDOW)["similarity"],
+        # ECHOS-NMR baseline (Amezcua & Szabo 2013): same grid + Pearson, 5-point box bin, no blur.
+        "echos_Amezcua13": lambda x, y: echos_similarity(x, y, **WINDOW)["similarity"],
         # Ablation baseline: same render/blur as LCC without mean-centring.
         "cosine_uncentred": lambda x, y: cosine_similarity(x, y, **WINDOW)["similarity"],
     }

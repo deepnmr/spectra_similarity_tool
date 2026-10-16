@@ -21,7 +21,7 @@ import numpy as np
 
 from hsqc_similarity import Spectrum2D, hsqc_similarity
 from hsqc_methods import nn_peak_similarity, quadtree_similarity
-from hsqc_lcc import cosine_similarity, lcc_similarity, local_contrast_similarity
+from hsqc_lcc import cosine_similarity, echos_similarity, lcc_similarity, local_contrast_similarity
 
 RAW = "https://raw.githubusercontent.com/EricHughesABC/simpleNMR/main/exampleProblems"
 # local_name -> (folder, remote_filename); two backups store the json under the compound name.
@@ -51,6 +51,8 @@ METHODS = {
     "nn_Pierens12": lambda x, y: nn_peak_similarity(x, y, **WIN)["similarity"],
     "lcc_new":      lambda x, y: lcc_similarity(x, y, sigma_f2=0.05, sigma_f1=0.5, step_f2=0.02, step_f1=0.2, **WIN)["similarity"],
     "local_contrast": lambda x, y: local_contrast_similarity(x, y, sigma_f2=0.05, sigma_f1=0.5, step_f2=0.02, step_f1=0.2, **WIN)["similarity"],
+    # ECHOS-NMR baseline (Amezcua & Szabo 2013): same grid + Pearson, 5-point box bin, no Gaussian blur.
+    "echos_Amezcua13": lambda x, y: echos_similarity(x, y, step_f2=0.02, step_f1=0.2, **WIN)["similarity"],
     # Ablation baseline: same render/blur as LCC but WITHOUT mean-centring (un-centred cosine /
     # contrast angle). Isolates what mean-centring buys -- see the ablation in the SI.
     "cosine_uncentred": lambda x, y: cosine_similarity(x, y, sigma_f2=0.05, sigma_f1=0.5, step_f2=0.02, step_f1=0.2, **WIN)["similarity"],

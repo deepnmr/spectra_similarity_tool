@@ -34,6 +34,7 @@ PROTEIN = {
     "tree_Castillo13":  (0.0283, -0.0102),
     "nn_Pierens12":     (0.0360, 0.0298),
     "cosine_uncentred": (0.59, None),   # SI ablation: un-centred cosine, protein
+    "echos_Amezcua13":  (0.7691, 0.6812),  # ECHOS baseline: 5-point box bin + Pearson, no blur
     "lcc_new":          (0.7549, 0.7096),
 }
 
@@ -43,9 +44,10 @@ LABELS = {
     "tree_Castillo13": "Tree (Castillo 2013)",
     "nn_Pierens12": "NN (Pierens 2012)",
     "cosine_uncentred": "Cosine (un-centred)",
+    "echos_Amezcua13": "ECHOS (Amezcua 2013)",
     "lcc_new": "STCC (this work)",
 }
-ORDER = ["bin_Bodis09", "bin_rot45", "tree_Castillo13", "nn_Pierens12", "cosine_uncentred", "lcc_new"]
+ORDER = ["bin_Bodis09", "bin_rot45", "tree_Castillo13", "nn_Pierens12", "cosine_uncentred", "echos_Amezcua13", "lcc_new"]
 
 
 def main() -> None:

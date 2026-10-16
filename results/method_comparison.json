@@ -16,6 +16,7 @@
       "bin_rot45": 1.0,
       "tree_Castillo13": 1.0,
       "nn_Pierens12": 1.0,
+      "echos_Amezcua13": 1.0,
       "lcc_new": 1.0
     },
     {
@@ -24,6 +25,7 @@
       "bin_rot45": 0.8385,
       "tree_Castillo13": 0.9401,
       "nn_Pierens12": 0.9925,
+      "echos_Amezcua13": 0.8813,
       "lcc_new": 0.9662
     },
     {
@@ -32,6 +34,7 @@
       "bin_rot45": 0.799,
       "tree_Castillo13": 0.8619,
       "nn_Pierens12": 0.9981,
+      "echos_Amezcua13": 0.9537,
       "lcc_new": 0.9594
     },
     {
@@ -40,6 +43,7 @@
       "bin_rot45": 0.857,
       "tree_Castillo13": 0.9443,
       "nn_Pierens12": 0.9877,
+      "echos_Amezcua13": 0.8579,
       "lcc_new": 0.9485
     },
     {
@@ -48,6 +52,7 @@
       "bin_rot45": 0.8555,
       "tree_Castillo13": 0.9179,
       "nn_Pierens12": 0.9848,
+      "echos_Amezcua13": 0.7836,
       "lcc_new": 0.8972
     },
     {
@@ -56,6 +61,7 @@
       "bin_rot45": 0.7912,
       "tree_Castillo13": 0.876,
       "nn_Pierens12": 0.9978,
+      "echos_Amezcua13": 0.9392,
       "lcc_new": 0.9558
     },
     {
@@ -64,6 +70,7 @@
       "bin_rot45": 0.7654,
       "tree_Castillo13": 0.8624,
       "nn_Pierens12": 0.9851,
+      "echos_Amezcua13": 0.8133,
       "lcc_new": 0.8911
     },
     {
@@ -72,6 +79,7 @@
       "bin_rot45": 0.5681,
       "tree_Castillo13": 0.8721,
       "nn_Pierens12": 0.955,
+      "echos_Amezcua13": 0.1024,
       "lcc_new": 0.1815
     }
   ],
@@ -80,6 +88,7 @@
     "bin_rot45": 0.2497,
     "tree_Castillo13": 0.0283,
     "nn_Pierens12": 0.036,
+    "echos_Amezcua13": 0.7691,
     "lcc_new": 0.7549
   }
 }

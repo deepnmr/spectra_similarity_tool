@@ -16,11 +16,17 @@ different-compound pairs.
 | Quad-tree (Castillo 2013) | 0.028 | −0.010 | 0.413 | 0.069 |
 | Nearest neighbour (Pierens 2012) | 0.036 | 0.030 | 0.099 | 0.041 |
 | Cosine, un-centred (STCC ablation) | 0.590 | — | 0.744 | 0.373 |
+| ECHOS (Amezcua 2013; box bin, no lineshape) | 0.769 | 0.681 | 0.666 | 0.060 |
 | **STCC (default)** | **0.755** | **0.710** | **0.745** | **0.374** |
 
-Among the primary methods, STCC gives the strongest separation in both regimes.
-Mean-centring matters in the crowded dense fingerprint (0.590→0.755) but changes
-little on sparse sticks (0.744→0.745).
+Among the primary methods, STCC gives the strongest separation on the sparse
+regime and ties the ECHOS baseline on the dense one. The two ablations are
+complementary: mean-centring matters in the crowded dense fingerprint
+(cosine 0.590→0.755) but changes little on sparse sticks (0.744→0.745), whereas
+the Gaussian lineshape matters on sparse sticks (ECHOS 0.666/0.060→0.745/0.374)
+but not on the dense fingerprint (0.769/0.681 vs 0.755/0.710). ECHOS is the
+Pearson correlation of Amezcua & Szabo (J Pharm Sci 2013) on a 5-point box bin —
+STCC without the blur.
 
 ![primary separation across both regimes](comparison_all.png)
 
