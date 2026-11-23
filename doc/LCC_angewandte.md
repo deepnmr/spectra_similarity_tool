@@ -37,9 +37,11 @@ linewidth combined with the expected shift drift, and scores the pair by the mea
 zero-lag normalized cross-correlation of the two images. The Gaussian render supplies graded,
 physically-tunable shift tolerance while mean-centring actively penalizes intensity that is
 not co-located. On two deliberately opposite benchmarks — a dense protein $^1$H–$^{15}$N amide
-fingerprint and a sparse small-molecule $^1$H–$^{13}$C set — STCC gives the widest same/different
-separation among the primary reference methods (0.75 dense, 0.74 sparse on a $[0,1]$ scale), far
-outscoring the saturating tree and nearest-neighbour measures. Its dense-fingerprint advantage is
+fingerprint and a sparse small-molecule $^1$H–$^{13}$C set — STCC is the only measure that separates
+same from different in both (0.75 dense, 0.74 sparse on a $[0,1]$ scale), far outscoring the
+saturating tree and nearest-neighbour measures; the ECHOS-NMR correlation of Amezcua and Szabo, its
+un-blurred ancestor from biologics comparability, ties it on the dense fingerprint (0.77) but
+collapses on shifted sparse spectra (margin 0.06 vs 0.37). Its dense-fingerprint advantage is
 large and, on an expanded test, keeps both of two decoy proteins below every same-protein titration
 point; removing the mean-centring step collapses the original dense-protein separation from 0.75 to
 0.59. An experimental, post hoc local-contrast extension raises separation from 0.57 to 0.67 on
@@ -119,16 +121,22 @@ and the peak method of Pierens et al. picks peaks and matches each to its neares
 the other spectrum.$^{[26]}$ Both build in genuine shift tolerance — but in a crowded window
 every peak has *some* near neighbour and every spectrum a similar mass-centre structure, so both
 saturate near unity and retain almost no contrast between related and unrelated spectra. They
-are shift-**blind**. A measure fit for real HSQC comparison must tolerate the small physical
-drifts a titration or a solvent change induces, yet still penalize intensity that is genuinely
-relocated.
+are shift-**blind**. A fourth measure comes from biologics comparability rather than from
+dereplication: ECHOS-NMR (easy comparability of higher-order structure by NMR) of Amezcua and
+Szabo scores two spectra by the Pearson correlation of their point-by-point intensities after a
+five-point box average, and reports $1-R$,$^{[27]}$ a statistic later applied to 2D-HSQC titrations
+and, with a diffusion filter, to label-free 1D protein-observed screening.$^{[28,29]}$ Being a
+mean-centred correlation it discriminates well, but its box bin gives it the same hard edges as the
+bin method: it is a correlation without a lineshape. A measure fit for real HSQC comparison must
+tolerate the small physical drifts a titration or a solvent change induces, yet still penalize
+intensity that is genuinely relocated.
 
 We resolve this tension with the Shift-Tolerant Correlation Coefficient (STCC), a measure that keeps
 the physically meaningful ingredients of all three predecessors — area-weighted integration and
 unit normalization (Bodis), a physical shift tolerance (Castillo), and a lineshape picture of
 the spectrum (Pierens) — and adds a mean-centred correlation as the discriminating step. Given
 two spectra compared inside a common window $\Omega$ (processed Bruker data from any standard
-pipeline$^{[27-31]}$ or peak lists rendered to a grid), STCC proceeds in three steps (Figure 1a).
+pipeline$^{[30-34]}$ or peak lists rendered to a grid), STCC proceeds in three steps (Figure 1a).
 
 **Render.** Negative intensities are clipped, each point is weighted by its local integration
 area, and *both* spectra are histogrammed onto a **single shared grid**, so they are directly
@@ -151,15 +159,19 @@ by two spectroscopic quantities: the linewidth (the floor) and the expected shif
 **Score.** Each image is mean-centred and the similarity is the zero-lag normalized
 cross-correlation — the Pearson coefficient — of the two centred images, clamped to $[0,1]$.
 This is the mean-centred (Pearson) counterpart of the cosine / contrast-angle similarity long used
-in mass-spectral library search$^{[32,33]}$ — equivalently, the zero-mean normalized
-cross-correlation (ZNCC) standard in image registration and template matching$^{[34]}$ — applied to
+in mass-spectral library search$^{[35,36]}$ — equivalently, the zero-mean normalized
+cross-correlation (ZNCC) standard in image registration and template matching$^{[37]}$ — applied to
 blurred 2D-HSQC images; the un-centred cosine we report as an ablation is exactly that contrast
-angle, and mean-centring is what separates STCC from it. Mean-centring is what turns overlap into
+angle, and mean-centring is what separates STCC from it. Within NMR the same Pearson statistic is
+what ECHOS-NMR computes on box-binned spectra,$^{[27]}$ so STCC can be read as ECHOS with the box
+bin replaced by a physical lineshape and carried to two dimensions; ECHOS evaluated on the same
+grid without the Gaussian blur is therefore our second ablation, isolating what the lineshape
+buys. Mean-centring is what turns overlap into
 discrimination: a cell where one spectrum has a peak (a value above its mean) and the other is
 empty (a value below its mean) contributes a **negative** product and lowers the score, so
 intensity that is not co-located is actively penalized rather than merely ignored, as it is by
 the one-way nearest-neighbour distance. No shift search is performed. Aligning the images — as
-in NMR peak-alignment tools such as icoshift$^{[35]}$ — would let a genuinely different spectrum
+in NMR peak-alignment tools such as icoshift$^{[38]}$ — would let a genuinely different spectrum
 slide into registration and re-saturate, reintroducing exactly the failure mode of the tree and
 nearest-neighbour methods. Scoring at zero lag keeps the position information that carries the
 discrimination.
@@ -175,7 +187,7 @@ $$
 
 then takes the clipped zero-lag cosine of $F_x$ and $F_y$. The square root reduces domination by a
 few intense peaks, an intensity-weighting rationale used in mass-spectral library search but not
-direct evidence of NMR performance;$^{[39]}$ the fixed $3\sigma$ background subtraction removes
+direct evidence of NMR performance;$^{[42]}$ the fixed $3\sigma$ background subtraction removes
 broad baseline and common
 low-frequency density. The factor three is fixed by design rather than exposed as another tuning
 parameter. The candidate adds no dependency, alignment, peak picking or model and preserves the
@@ -185,13 +197,13 @@ false-positive rate improves without degrading the other regime.
 
 The measure has the properties one expects of a similarity: self-similarity is exactly one, the
 score is exactly symmetric, and it is monotone in the drift of an isolated peak (all verified in
-the test suite; Supporting Information). The implementation is pure NumPy,$^{[36]}$ reads
+the test suite; Supporting Information). The implementation is pure NumPy,$^{[39]}$ reads
 processed Bruker data directly, and requires neither peak picking nor an external solver. On a
 representative dense pair, STCC takes 12.8 ms and the experimental local-contrast extension takes
 17.2 ms (1.34$\times$; Apple Silicon, single core). A 46-test suite (all passing) checks
 self-similarity, symmetry, boundedness, related-beats-unrelated ordering, monotonicity in drift,
 intensity-scale and render-grid invariance, explicit invalid-input errors, and the existing
-regressions; figures use Matplotlib.$^{[37]}$ A full derivation with proofs is given in the
+regressions; figures use Matplotlib.$^{[40]}$ A full derivation with proofs is given in the
 Supporting Information.
 
 We benchmarked STCC against the three reference methods on two deliberately **opposite** regimes,
@@ -208,10 +220,15 @@ compared with six spectra of the same protein along a ligand titration (which sh
 and with a **different** protein (which should score low), inside a
 $^1$H 6.5–10 $\times$ $^{15}$N 105–130 ppm window. STCC scores the same protein 0.94 (range
 0.89–0.97) and the different protein 0.18, a margin of 0.71 — three times the bin method's margin of 0.24,
-the strongest baseline. Mean-centring earns that gap: replacing it with an un-centred cosine
-overlap on the *same* images drops the separation from 0.75 to 0.59. This gain is not a tuned
-artefact; it holds across the entire physical blur range and even survives coarsening the grid
-to the bin method's own resolution (Supporting Information).
+the strongest of the dereplication measures. Mean-centring earns that gap: replacing it with an
+un-centred cosine overlap on the *same* images drops the separation from 0.75 to 0.59. The ECHOS
+baseline — the same mean-centred correlation on the same grid, but with ECHOS's five-point box bin in
+place of the lineshape blur — confirms where the gain lives: it separates as well as STCC (0.77 vs
+0.75) with a slightly smaller margin (0.68 vs 0.71), so on this benchmark the discrimination comes
+from the centred correlation that ECHOS already has, and the lineshape adds a smoother, graded
+response rather than a larger gap. This gain is not a tuned artefact; it holds across the entire
+physical blur range and even survives coarsening the grid to the bin method's own resolution
+(Supporting Information).
 
 *A second decoy protein and an independent titration.* Because that margin is measured against a
 single decoy protein, we tested whether STCC's advantage survives a harder, self-contained design:
@@ -231,14 +248,18 @@ and margin to 0.67 and 0.52, respectively (Table 2).
 
 *Sparse small-molecule $^1$H–$^{13}$C.* To probe the opposite regime — and to replace the single
 negative spectrum above with a large negative set — we used public HSQC peak lists from the
-simpleNMR example set$^{[38]}$ for five compounds each recorded twice (one nominal sixth pair was
+simpleNMR example set$^{[41]}$ for five compounds each recorded twice (one nominal sixth pair was
 excluded on inspection as a byte-identical duplicate; Supporting Information), and asked each
 method to score the 5 same-compound pairs above the 40 different-compound pairs, inside a
 $^1$H 0–10 $\times$ $^{13}$C 0–165 ppm window. The peak lists are rasterized as sticks, after which
 each method applies its own shift-tolerance processing; this removes the earlier double blur.
 Among the primary methods STCC again leads (mean same 0.746, mean different 0.0016, separation
 0.745, margin 0.374). The bin method is far stronger here than on the dense
-fingerprint (0.29): with few, well-separated peaks its hard bins rarely straddle a peak. The
+fingerprint (0.29): with few, well-separated peaks its hard bins rarely straddle a peak. The ECHOS
+baseline, which tied STCC on the dense protein, now falls behind (separation 0.67, margin 0.06):
+without a lineshape its box bin scores the two genuinely shifted same-compound pairs 0.06 and 0.39,
+so here it is the Gaussian blur, not mean-centring, that keeps the same compound above every
+different one. The
 tree and nearest-neighbour methods, however, **leave the two classes barely separable in this
 regime too** (margins 0.07 and 0.04, despite separations of 0.41 and 0.10): over a wide window a
 different molecule still supplies a near neighbour for every peak. Their shift tolerance is
@@ -265,7 +286,11 @@ one autocorrelated titration. Default promotion is reserved for lower held-out t
 rejection FPR without a loss in the other regime; that condition is not met here.
 
 Across both regimes, default STCC beats the saturating tree and nearest-neighbour methods while
-retaining graded shift tolerance, and it matches or exceeds the bin method. The post hoc
+retaining graded shift tolerance, and it matches or exceeds the bin method. Its two ablations are
+complementary: mean-centring carries the dense fingerprint (cosine 0.59 vs 0.75) and the lineshape
+carries the sparse one (ECHOS margin 0.06 vs 0.37), and STCC is the only measure in Table 1 that
+holds both — which is the sense in which it generalizes the ECHOS correlation rather than merely
+renaming it. The post hoc
 Local-Contrast extension improves descriptive separation and margin on the expanded dense and
 sparse benchmarks, but it does not improve held-out threshold error or rejection FPR and is
 therefore not promoted. STCC's two knobs, the per-axis blur widths, are both
@@ -334,11 +359,12 @@ everything.](../results/lcc_schematic.png)
 
 ![**Figure 2.** Same/different separation (mean same-class − mean different-class similarity) for
 the primary methods on the two benchmarks: dense protein $^1$H–$^{15}$N (left of each pair) and sparse
-small-molecule $^1$H–$^{13}$C (right). STCC leads the primary comparison in both regimes; the tree and nearest-neighbour
-methods saturate in both. The un-centred cosine (an ablation of STCC without mean-centring) matches
+small-molecule $^1$H–$^{13}$C (right). STCC leads the primary comparison in the sparse regime and ties the ECHOS
+baseline in the dense one (0.75 vs 0.77); the tree and nearest-neighbour methods saturate in both. The un-centred cosine (an ablation of STCC without mean-centring) matches
 STCC closely on the sparse regime (0.74 vs 0.74) but falls from 0.75 to 0.59 on the dense fingerprint, isolating
 mean-centring as the step that rescues discrimination when peaks
-crowd. The experimental Local-Contrast extension is reported in Table 2 and the Supporting
+crowd; the ECHOS baseline (STCC without the lineshape blur) shows the mirror image, tying STCC on the dense
+fingerprint but dropping to 0.67 on the sparse set. The experimental Local-Contrast extension is reported in Table 2 and the Supporting
 Information rather than mixed into this original dense comparison.](../results/comparison_all.png)
 
 ![**Figure 3.** Statistical strength and the mean-centring ablation. **(a)** Sparse
@@ -359,10 +385,12 @@ unrounded scores. Higher is better; every method self-scores 1.00.
 | Quad-tree (Castillo, 2013) | 0.03 | −0.01 | 0.41 | 0.07 |
 | Nearest neighbour (Pierens, 2012) | 0.04 | 0.03 | 0.10 | 0.04 |
 | Cosine, un-centred (STCC ablation) | 0.59 | — | 0.74 | 0.37 |
+| ECHOS (Amezcua, 2013; box bin, no lineshape) | 0.77 | 0.68 | 0.67 | 0.06 |
 | **STCC (this work)** | **0.75** | **0.71** | **0.74** | **0.37** |
 
-The un-centred cosine is STCC without mean-centring, on the same rendered/blurred images; it is an
-ablation, not an independent method; its dense-protein margin is not tabulated here (the code
+The un-centred cosine is STCC without mean-centring, on the same rendered/blurred images, and ECHOS
+is STCC without the lineshape blur (Pearson on a five-point box bin, as published$^{[27]}$); each is an
+ablation of one STCC ingredient rather than an independent method; its dense-protein margin is not tabulated here (the code
 computes a margin for every method, but the stored dense ablation entry carries the separation
 only). The dense separations and margins in this table are `bench.py` output, regenerable once the
 dense spectra are deposited (Data Availability Statement). The $^1$H–$^{13}$C benchmark uses 5 same-compound pairs and 40
@@ -384,6 +412,7 @@ the repository; raw spectra per the Data Availability Statement).
 | --- | :---: | :---: | :---: | :---: |
 | Local Contrast (experimental) | 0.75 | 0.66 | 0.02 | 0.14 |
 | **STCC (default)** | **0.87** | **0.82** | 0.19 | 0.41 |
+| ECHOS (Amezcua, 2013; box bin, no lineshape) | 0.78 | 0.71 | 0.12 | 0.25 |
 | Cosine, un-centred (STCC ablation) | 0.90 | 0.85 | 0.36 | 0.51 |
 | Bin (Bodis, 2009) | 0.82 | 0.75 | 0.46 | 0.50 |
 | Bin + 45° rotation | 0.86 | 0.81 | 0.52 | 0.56 |
@@ -394,6 +423,7 @@ the repository; raw spectra per the Data Availability Statement).
 | --- | :---: | :---: |
 | Local Contrast (experimental) | **0.67** | **0.52** |
 | **STCC (default)** | 0.57 | 0.41 |
+| ECHOS (Amezcua, 2013; box bin, no lineshape) | 0.60 | 0.46 |
 | Cosine, un-centred (STCC ablation) | 0.46 | 0.35 |
 | Bin (Bodis, 2009) | 0.34 | 0.25 |
 | Bin + 45° rotation | 0.32 | 0.25 |
@@ -519,37 +549,45 @@ C. Joneckis, S. Kozlowski, A. Rosenberg, L. Schrager, E. Shacter, R. Temple, K. 
 
 [26] G. K. Pierens, S. Brossi, Z. Yang, D. C. Reutens, V. Vegh, *J. Cheminform.* **2012**, *4*, 25.
 
-[27] F. Delaglio, S. Grzesiek, G. W. Vuister, G. Zhu, J. Pfeifer, A. Bax, *J. Biomol. NMR*
+[27] C. A. Amezcua, C. M. Szabo, *J. Pharm. Sci.* **2013**, *102*, 1724–1733.
+
+[28] C. Peng, A. T. Namanja, E. Munoz, H. Wu, T. E. Frederick, M. Maestre-Martinez,
+I. I. Fernandez, Q. Sun, C. Cobas, C. Sun, A. M. Petros, *J. Biomol. NMR* **2023**, *77*, 39–53.
+
+[29] T. E. Frederick, A. T. Namanja, H. Wu, C. Sun, A. M. Petros, *ACS Med. Chem. Lett.* **2025**,
+*16*, 688–692.
+
+[30] F. Delaglio, S. Grzesiek, G. W. Vuister, G. Zhu, J. Pfeifer, A. Bax, *J. Biomol. NMR*
 **1995**, *6*, 277–293.
 
-[28] W. F. Vranken, W. Boucher, T. J. Stevens, R. H. Fogh, A. Pajon, M. Llinas, E. L. Ulrich,
+[31] W. F. Vranken, W. Boucher, T. J. Stevens, R. H. Fogh, A. Pajon, M. Llinas, E. L. Ulrich,
 J. L. Markley, J. Ionides, E. D. Laue, *Proteins* **2005**, *59*, 687–696.
 
-[29] S. P. Skinner, R. H. Fogh, W. Boucher, T. J. Ragan, L. G. Mureddu, G. W. Vuister,
+[32] S. P. Skinner, R. H. Fogh, W. Boucher, T. J. Ragan, L. G. Mureddu, G. W. Vuister,
 *J. Biomol. NMR* **2016**, *66*, 111–124.
 
-[30] C. Ludwig, U. L. Günther, *BMC Bioinformatics* **2011**, *12*, 366.
+[33] C. Ludwig, U. L. Günther, *BMC Bioinformatics* **2011**, *12*, 366.
 
-[31] J. J. Helmus, C. P. Jaroniec, *J. Biomol. NMR* **2013**, *55*, 355–367.
+[34] J. J. Helmus, C. P. Jaroniec, *J. Biomol. NMR* **2013**, *55*, 355–367.
 
-[32] S. E. Stein, D. R. Scott, *J. Am. Soc. Mass Spectrom.* **1994**, *5*, 859–866.
+[35] S. E. Stein, D. R. Scott, *J. Am. Soc. Mass Spectrom.* **1994**, *5*, 859–866.
 
-[33] K. X. Wan, I. Vidavsky, M. L. Gross, *J. Am. Soc. Mass Spectrom.* **2002**, *13*, 85–88.
+[36] K. X. Wan, I. Vidavsky, M. L. Gross, *J. Am. Soc. Mass Spectrom.* **2002**, *13*, 85–88.
 
-[34] J. P. Lewis, *Vision Interface* **1995**, *10*, 120–123.
+[37] J. P. Lewis, *Vision Interface* **1995**, *10*, 120–123.
 
-[35] F. Savorani, G. Tomasi, S. B. Engelsen, *J. Magn. Reson.* **2010**, *202*, 190–202.
+[38] F. Savorani, G. Tomasi, S. B. Engelsen, *J. Magn. Reson.* **2010**, *202*, 190–202.
 
-[36] C. R. Harris, K. J. Millman, S. J. van der Walt, R. Gommers, P. Virtanen, D. Cournapeau,
+[39] C. R. Harris, K. J. Millman, S. J. van der Walt, R. Gommers, P. Virtanen, D. Cournapeau,
 E. Wieser, J. Taylor, S. Berg, N. J. Smith, R. Kern, M. Picus, S. Hoyer, M. H. van Kerkwijk,
 M. Brett, A. Haldane, J. F. del Río, M. Wiebe, P. Peterson, P. Gérard-Marchant, K. Sheppard,
 T. Reddy, W. Weckesser, H. Abbasi, C. Gohlke, T. E. Oliphant, *Nature* **2020**, *585*, 357–362.
 
-[37] J. D. Hunter, *Comput. Sci. Eng.* **2007**, *9*, 90–95.
+[40] J. D. Hunter, *Comput. Sci. Eng.* **2007**, *9*, 90–95.
 
-[38] E. Hughes, A. M. Kenwright, *Magn. Reson. Chem.* **2024**, *62*, 556–565.
+[41] E. Hughes, A. M. Kenwright, *Magn. Reson. Chem.* **2024**, *62*, 556–565.
 
-[39] C. E. Hart, T. Kind, P. C. Dorrestein, D. Healey, D. Domingo-Fernández,
+[42] C. E. Hart, T. Kind, P. C. Dorrestein, D. Healey, D. Domingo-Fernández,
 *J. Am. Soc. Mass Spectrom.* **2024**, *35*, 266–274.
 
 ---

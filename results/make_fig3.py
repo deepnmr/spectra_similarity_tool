@@ -29,6 +29,7 @@ ROWS = [  # (label, key, colour) sorted high->low separation
     ("Cosine, un-centred", "cosine_uncentred", LBLUE),
     ("Bin + 45°", "bin_rot45", ORANGE),
     ("Bin (Bodis 2009)", "bin_Bodis09", ORANGE),
+    ("ECHOS (Amezcua 2013)", "echos_Amezcua13", GREY),
     ("Quad-tree (Castillo 2013)", "tree_Castillo13", GREY),
     ("NN (Pierens 2012)", "nn_Pierens12", GREY),
 ]

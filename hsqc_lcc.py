@@ -170,6 +170,40 @@ def cosine_similarity(spectrum_x: Spectrum2D, spectrum_y: Spectrum2D, **kwargs) 
     return lcc_similarity(spectrum_x, spectrum_y, center=False, **kwargs)
 
 
+def echos_similarity(
+    spectrum_x: Spectrum2D,
+    spectrum_y: Spectrum2D,
+    range_f2: tuple[float, float] | None = None,
+    range_f1: tuple[float, float] | None = None,
+    step_f2: float = 0.01,
+    step_f1: float = 0.10,
+    bin_points: int = 5,
+    baseline: str = "clip",
+) -> dict[str, object]:
+    """ECHOS-NMR baseline (Amezcua & Szabo, J. Pharm. Sci. 2013): Pearson correlation of
+    point-by-point intensities after a ``bin_points``-point box average, no lineshape blur.
+
+    Same shared-grid render and mean-centred zero-lag correlation as STCC, but the Gaussian
+    lineshape blur is replaced by ECHOS's uniform 5-point bin -- so this row isolates what the
+    physical (graded) shift tolerance buys. ECHOS reports 1 - R; this returns R on the common
+    [0, 1] scale. Self-similarity is exactly 1."""
+    if bin_points < 1:
+        raise ValueError("bin_points must be >= 1")
+    img_x, img_y, range_f2, range_f1 = _render_pair(
+        spectrum_x, spectrum_y, range_f2, range_f1, sigma_f2=0.0, sigma_f1=0.0,
+        step_f2=step_f2, step_f1=step_f1, baseline=baseline,
+    )
+    box = np.full(bin_points, 1.0 / bin_points)
+    a, b = img_x.image, img_y.image
+    if bin_points > 1:
+        a = _smooth_axis(_smooth_axis(a, box, axis=1), box, axis=0)
+        b = _smooth_axis(_smooth_axis(b, box, axis=1), box, axis=0)
+    return _report(
+        "echos", _zncc(a, b, center=True), img_x, range_f2, range_f1, spectrum_x, spectrum_y,
+        bin_points=int(bin_points),
+    )
+
+
 def _local_contrast_feature(rendered: RenderedImage) -> np.ndarray:
     high = np.sqrt(np.maximum(rendered.image, 0.0))
     background = high
@@ -226,7 +260,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("spectrum_x", help="Bruker experiment directory, pdata directory, or 2rr file")
     p.add_argument("spectrum_y", help="Bruker experiment directory, pdata directory, or 2rr file")
-    p.add_argument("--method", choices=["lcc", "local-contrast"], default="lcc")
+    p.add_argument("--method", choices=["lcc", "local-contrast", "echos"], default="lcc")
     p.add_argument("--procno", type=int, default=None)
     p.add_argument("--f2-min", type=float, default=None)
     p.add_argument("--f2-max", type=float, default=None)
@@ -248,14 +282,20 @@ def main(argv: Iterable[str] | None = None) -> int:
     range_f1 = _paired_range(args.f1_min, args.f1_max, "f1")
     x = read_bruker_2d(args.spectrum_x, procno=args.procno)
     y = read_bruker_2d(args.spectrum_y, procno=args.procno)
-    similarity = lcc_similarity if args.method == "lcc" else local_contrast_similarity
-    extra = {"intensity_p": args.p} if args.method == "lcc" else {}
-    result = similarity(
-        x, y, range_f2=range_f2, range_f1=range_f1,
-        sigma_f2=args.sigma_f2, sigma_f1=args.sigma_f1,
-        step_f2=args.step_f2, step_f1=args.step_f1,
-        baseline=args.baseline, **extra,
-    )
+    if args.method == "echos":  # no lineshape blur: box bin + Pearson only
+        result = echos_similarity(
+            x, y, range_f2=range_f2, range_f1=range_f1,
+            step_f2=args.step_f2, step_f1=args.step_f1, baseline=args.baseline,
+        )
+    else:
+        similarity = lcc_similarity if args.method == "lcc" else local_contrast_similarity
+        extra = {"intensity_p": args.p} if args.method == "lcc" else {}
+        result = similarity(
+            x, y, range_f2=range_f2, range_f1=range_f1,
+            sigma_f2=args.sigma_f2, sigma_f1=args.sigma_f1,
+            step_f2=args.step_f2, step_f1=args.step_f1,
+            baseline=args.baseline, **extra,
+        )
     if args.json:
         print(json.dumps(result, indent=2))
     else:

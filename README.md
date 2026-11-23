@@ -210,12 +210,13 @@ python3 hsqc_methods.py exp1 exp2 --method nn         # Pierens et al. 2012
   matches each to its nearest neighbour in the other, and maps the average
   peak-to-peak distance `d` to `1/(1+d)`.
 
-`hsqc_lcc.py` implements STCC and an experimental local-contrast variant:
+`hsqc_lcc.py` implements STCC, an experimental local-contrast variant, and the ECHOS baseline:
 
 ```bash
 python3 hsqc_lcc.py exp1 exp2 --f2-min 6.5 --f2-max 10 --f1-min 105 --f1-max 130
 python3 hsqc_lcc.py exp1 exp2 --sigma-f2 0.03 --sigma-f1 0.30 --json
 python3 hsqc_lcc.py exp1 exp2 --method local-contrast --json
+python3 hsqc_lcc.py exp1 exp2 --method echos --json          # Amezcua & Szabo 2013 baseline
 ```
 
 - **Shift-Tolerant Correlation Coefficient (STCC, this work; `--method lcc`)** renders each spectrum to
@@ -260,11 +261,19 @@ differently (`separation` = mean same-protein score − different-protein score;
 | Bin + 45° rotation | 1.00 | 0.82 | 0.57 | 0.25 | 0.20 |
 | Quad-tree (Castillo 2013) | 1.00 | 0.90 | 0.87 | 0.03 | −0.01 |
 | Nearest-neighbour (Pierens 2012) | 1.00 | 0.99 | 0.96 | 0.04 | 0.03 |
+| ECHOS (Amezcua 2013; box bin, no lineshape) | 1.00 | 0.87 | 0.10 | 0.77 | 0.68 |
 | **STCC (this work)** | 1.00 | **0.94** | **0.18** | **0.75** | **0.71** |
 
 STCC separates same-protein from different-protein spectra ~2.6× better than the
-previous best and pushes the different protein (0.18) below *every* same-protein
-score. It beats the bin method across the whole physical blur range (separation
+best dereplication measure (bin) and pushes the different protein (0.18) below *every* same-protein
+score. The ECHOS row (`--method echos`) is the Pearson correlation of Amezcua & Szabo
+(J Pharm Sci 2013, the ECHOS-NMR comparability test for biologics) on the same shared grid with
+their 5-point box bin and no Gaussian blur — i.e. STCC minus the lineshape. It separates as well as
+STCC (0.77) with a slightly smaller margin (0.68) and a rougher titration (0.78–0.95 vs 0.89–0.97):
+the discrimination comes from the mean-centred correlation ECHOS already has; the lineshape blur
+adds the graded response to drift, not a larger gap. On the expanded two-decoy benchmark ECHOS
+scores slightly higher than STCC (separation 0.60 vs 0.57, margin 0.46 vs 0.41; see
+[`results/README.md`](results/README.md)). It beats the bin method across the whole physical blur range (separation
 0.71–0.77 at `sigma` 0.02–0.04 / 0.20–0.40 ppm, still 0.36 even coarsened to the
 bin method's own resolution), so the gain is not one tuned parameter. Full numbers,
 robustness sweep, and a plot are in [`results/`](results/README.md).

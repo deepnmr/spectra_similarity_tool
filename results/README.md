@@ -20,18 +20,18 @@ Raw data: [`method_comparison.csv`](method_comparison.csv),
 
 ![method comparison](lcc_comparison.png)
 
-| comparison | bin (Bodis 2009) | bin + 45° | tree (Castillo 2013) | NN (Pierens 2012) | **STCC (this work)** |
-| --- | --- | --- | --- | --- | --- |
-| 2 vs 2 (self) | 1.0000 | 1.0000 | 1.0000 | 1.0000 | **1.0000** |
-| 2 vs 4 (+B12) | 0.8106 | 0.8385 | 0.9401 | 0.9925 | **0.9662** |
-| 2 vs 6 (+NB91) | 0.7739 | 0.7990 | 0.8619 | 0.9981 | **0.9594** |
-| 2 vs 8 (+benz) | 0.8274 | 0.8570 | 0.9443 | 0.9877 | **0.9485** |
-| 2 vs 10 (+GB001) | 0.8164 | 0.8555 | 0.9179 | 0.9848 | **0.8972** |
-| 2 vs 12 (+PF1) | 0.7637 | 0.7912 | 0.8760 | 0.9978 | **0.9558** |
-| 2 vs 14 (+PF2) | 0.7320 | 0.7654 | 0.8624 | 0.9851 | **0.8911** |
-| **2 vs OAA (different protein)** | 0.4949 | 0.5681 | 0.8721 | 0.9550 | **0.1815** |
-| separation (mean same − different) | 0.29 | 0.25 | 0.03 | 0.04 | **0.75** |
-| worst-case margin (min same − different) | 0.24 | 0.20 | −0.01 | 0.03 | **0.71** |
+| comparison | bin (Bodis 2009) | bin + 45° | tree (Castillo 2013) | NN (Pierens 2012) | ECHOS (Amezcua 2013) | **STCC (this work)** |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2 vs 2 (self) | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | **1.0000** |
+| 2 vs 4 (+B12) | 0.8106 | 0.8385 | 0.9401 | 0.9925 | 0.8813 | **0.9662** |
+| 2 vs 6 (+NB91) | 0.7739 | 0.7990 | 0.8619 | 0.9981 | 0.9537 | **0.9594** |
+| 2 vs 8 (+benz) | 0.8274 | 0.8570 | 0.9443 | 0.9877 | 0.8579 | **0.9485** |
+| 2 vs 10 (+GB001) | 0.8164 | 0.8555 | 0.9179 | 0.9848 | 0.7836 | **0.8972** |
+| 2 vs 12 (+PF1) | 0.7637 | 0.7912 | 0.8760 | 0.9978 | 0.9392 | **0.9558** |
+| 2 vs 14 (+PF2) | 0.7320 | 0.7654 | 0.8624 | 0.9851 | 0.8133 | **0.8911** |
+| **2 vs OAA (different protein)** | 0.4949 | 0.5681 | 0.8721 | 0.9550 | 0.1024 | **0.1815** |
+| separation (mean same − different) | 0.29 | 0.25 | 0.03 | 0.04 | 0.77 | **0.75** |
+| worst-case margin (min same − different) | 0.24 | 0.20 | −0.01 | 0.03 | 0.68 | **0.71** |
 
 ## Conclusion
 
@@ -42,6 +42,15 @@ from different-protein spectra **~2.6× better than the previous best** (0.75 vs
 bin method's 0.29), and pushes the different protein (0.18) clearly below **every**
 same-protein score. The old bin method left the different protein (0.49) close to
 the worst same-protein point (0.73); STCC opens a wide gap.
+
+**ECHOS baseline.** The ECHOS column is the Pearson correlation of Amezcua & Szabo
+(J Pharm Sci 2013; ECHOS-NMR, higher-order-structure comparability of biologics)
+on the same shared grid with their 5-point box bin and *no* Gaussian lineshape —
+STCC minus the blur (`echos_similarity`, `--method echos`). It separates as well
+as STCC (0.77 vs 0.75) with a slightly smaller margin (0.68 vs 0.71) and a rougher
+titration trajectory (0.78–0.95 vs 0.89–0.97), so on this benchmark the
+discrimination comes from the mean-centred correlation and the lineshape adds a
+graded response to drift rather than a larger gap.
 
 The bin method is shift-**brittle** (hard bin edges split peaks the titration
 nudges); the tree and nearest-neighbour methods are shift-**blind** (a dense
@@ -72,10 +81,13 @@ background before the zero-lag cosine:
 | method | mean same | min same | OAA | EphB3 | separation | margin |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | STCC (default) | 0.8713 | 0.8195 | 0.1949 | 0.4144 | 0.5666 | 0.4051 |
+| ECHOS (Amezcua 2013; box bin, no lineshape) | 0.7814 | 0.7080 | 0.1187 | 0.2518 | 0.5961 | 0.4562 |
 | **Local Contrast (experimental)** | 0.7518 | 0.6612 | 0.0215 | 0.1383 | **0.6719** | **0.5230** |
 
 The candidate improves the descriptive separation and margin, at 1.34× the
-representative STCC runtime. It remains experimental because held-out operating
+representative STCC runtime. The ECHOS baseline also edges past STCC here
+(two decoys suppressed to 0.12/0.25 vs 0.19/0.41) while its titration runs lower
+and rougher (min same 0.71 vs 0.82). It remains experimental because held-out operating
 metrics on the sparse benchmark do not improve over STCC.
 
 Machine-readable expanded dense results: [`nhsqc_dense.json`](nhsqc_dense.json).

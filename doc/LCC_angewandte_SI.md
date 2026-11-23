@@ -365,24 +365,28 @@ $= \min_e S_\text{same} - S_\text{diff}$.
 **Table S2.** Per-comparison similarity, dense protein $^1$H–$^{15}$N benchmark. All methods
 self-score exactly 1.
 
-| comparison | Bin (Bodis 2009) | Bin + 45° | Tree (Castillo 2013) | NN (Pierens 2012) | **STCC** |
-| --- | :---: | :---: | :---: | :---: | :---: |
-| 2 vs 2 (self) | 1.0000 | 1.0000 | 1.0000 | 1.0000 | **1.0000** |
-| 2 vs 4 (+B12) | 0.8106 | 0.8385 | 0.9401 | 0.9925 | **0.9662** |
-| 2 vs 6 (+NB91) | 0.7739 | 0.7990 | 0.8619 | 0.9981 | **0.9594** |
-| 2 vs 8 (+benz) | 0.8274 | 0.8570 | 0.9443 | 0.9877 | **0.9485** |
-| 2 vs 10 (+GB001) | 0.8164 | 0.8555 | 0.9179 | 0.9848 | **0.8972** |
-| 2 vs 12 (+PF1) | 0.7637 | 0.7912 | 0.8760 | 0.9978 | **0.9558** |
-| 2 vs 14 (+PF2) | 0.7320 | 0.7654 | 0.8624 | 0.9851 | **0.8911** |
-| **2 vs OAA** | 0.4949 | 0.5681 | 0.8721 | 0.9550 | **0.1815** |
-| separation | 0.29 | 0.25 | 0.03 | 0.04 | **0.75** |
-| margin | 0.24 | 0.20 | −0.01 | 0.03 | **0.71** |
+| comparison | Bin (Bodis 2009) | Bin + 45° | Tree (Castillo 2013) | NN (Pierens 2012) | ECHOS (Amezcua 2013) | **STCC** |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: |
+| 2 vs 2 (self) | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | **1.0000** |
+| 2 vs 4 (+B12) | 0.8106 | 0.8385 | 0.9401 | 0.9925 | 0.8813 | **0.9662** |
+| 2 vs 6 (+NB91) | 0.7739 | 0.7990 | 0.8619 | 0.9981 | 0.9537 | **0.9594** |
+| 2 vs 8 (+benz) | 0.8274 | 0.8570 | 0.9443 | 0.9877 | 0.8579 | **0.9485** |
+| 2 vs 10 (+GB001) | 0.8164 | 0.8555 | 0.9179 | 0.9848 | 0.7836 | **0.8972** |
+| 2 vs 12 (+PF1) | 0.7637 | 0.7912 | 0.8760 | 0.9978 | 0.9392 | **0.9558** |
+| 2 vs 14 (+PF2) | 0.7320 | 0.7654 | 0.8624 | 0.9851 | 0.8133 | **0.8911** |
+| **2 vs OAA** | 0.4949 | 0.5681 | 0.8721 | 0.9550 | 0.1024 | **0.1815** |
+| separation | 0.29 | 0.25 | 0.03 | 0.04 | 0.77 | **0.75** |
+| margin | 0.24 | 0.20 | −0.01 | 0.03 | 0.68 | **0.71** |
 
 STCC separates same-protein from different-protein spectra $\approx 2.6\times$ better in separation
-(0.75 vs 0.29) than the previous best, pushing the different protein (0.18) below *every*
+(0.75 vs 0.29) than the best dereplication measure, pushing the different protein (0.18) below *every*
 same-protein score. The old bin
 method left the different protein (0.49) close to the worst same-protein point (0.73); STCC opens a
-wide gap.
+wide gap. The ECHOS column is the Pearson correlation of Amezcua and Szabo [39] evaluated on the
+same shared grid with their five-point box bin and no Gaussian blur (`echos_similarity` in
+`hsqc_lcc.py`): it reaches the same separation (0.77) with a slightly smaller margin (0.68) and a
+rougher titration trajectory (0.78–0.95 versus STCC's 0.89–0.97), which is the box bin's hard-edge
+response to the ligand-induced drift (§S10).
 
 **Expanded benchmark — a second decoy protein.** The benchmark above scores against a single decoy
 (OAA). To give the negative side a distribution over distinct folds — and to make the dense test
@@ -394,7 +398,11 @@ processed Bruker spectra in the same $^1$H 6.5–10 $\times$ $^{15}$N 105–130 
 on real titration data; both decoy proteins fall far below the entire titration (OAA 0.19,
 EphB3 0.41), so STCC's margin (0.41) is positive across two distinct folds and the negative side is a
 distribution, not one spectrum. Mean-centring still earns the gap (STCC separation 0.57 vs un-centred
-cosine 0.46), and the tree and NN measures again saturate (margins 0.12, 0.02). Local Contrast
+cosine 0.46), and the tree and NN measures again saturate (margins 0.12, 0.02). The ECHOS
+baseline (box bin, no lineshape blur) suppresses both decoys more strongly than STCC (OAA 0.12,
+EphB3 0.25) at the price of a lower and rougher titration (min same 0.71 vs 0.82), and on this
+expanded set its separation (0.60) and margin (0.46) exceed STCC's (0.57, 0.41): with two decoys
+the lineshape blur costs more on the decoy side than it earns on the titration side. Local Contrast
 suppresses the decoys further (0.02 and 0.14), raising separation to 0.67 and margin to 0.52.
 STCC's absolute margin is smaller than the six-point single-decoy benchmark (0.71) because this test is harder on both
 axes — a longer titration reaching larger shifts (min same 0.82 vs 0.89) and a tougher decoy
@@ -414,6 +422,7 @@ self-scores 1.
 | Quad-tree (Castillo 2013) | 0.946 | 0.912 | 0.793 | 0.749 |
 | Nearest neighbour (Pierens 2012) | 0.986 | 0.983 | 0.959 | 0.962 |
 | Cosine, un-centred (STCC ablation) | 0.897 | 0.853 | 0.360 | 0.507 |
+| ECHOS (Amezcua 2013; box bin, no lineshape) | 0.781 | 0.708 | 0.119 | 0.252 |
 | **STCC (default)** | 0.871 | 0.820 | 0.195 | 0.414 |
 
 **Table S3 (continued).** Discrimination summary for the expanded dense benchmark.
@@ -426,6 +435,7 @@ self-scores 1.
 | Quad-tree (Castillo 2013) | 0.176 | 0.119 |
 | Nearest neighbour (Pierens 2012) | 0.026 | 0.021 |
 | Cosine, un-centred (STCC ablation) | 0.464 | 0.346 |
+| ECHOS (Amezcua 2013; box bin, no lineshape) | 0.596 | 0.456 |
 | **STCC (default)** | 0.567 | 0.405 |
 
 **Table S4.** Selected points along the PRL3–olsalazine titration for STCC and experimental Local
@@ -477,6 +487,7 @@ benchmark row, not an asserted number).
 | **Local Contrast (experimental)** | **0.824** | 0.004 | **0.820** | **0.434** |
 | Bin (Bodis 2009) | 0.748 | 0.073 | 0.675 | 0.212 |
 | Bin + 45° | 0.768 | 0.096 | 0.672 | 0.194 |
+| ECHOS (Amezcua 2013; box bin, no lineshape) | 0.666 | 0.000 | 0.666 | 0.060 |
 | Quad-tree (Castillo 2013) | 0.914 | 0.502 | 0.413 | 0.069 |
 | Nearest neighbour (Pierens 2012) | 0.997 | 0.898 | 0.099 | 0.041 |
 | Cosine, un-centred (STCC ablation) | 0.747 | 0.002 | 0.744 | 0.373 |
@@ -489,13 +500,13 @@ high while the position-sensitive bin/STCC penalize the shift. The catch is that
 cosine column is identical to STCC to two decimals — in this sparse regime mean-centring changes
 nothing (see the ablation, §S10).
 
-| pair | Bin | Tree | NN | Cosine | STCC | Local Contrast |
-| --- | :---: | :---: | :---: | :---: | :---: | :---: |
-| menthol (two solvents) | 0.734 | 0.967 | 0.988 | 0.421 | 0.421 | **0.467** |
-| rotenone (re-measured) | 0.323 | 0.839 | 1.000 | 0.389 | 0.388 | **0.727** |
-| santonin | 0.973 | 0.993 | 1.000 | 1.000 | 1.000 | 0.999 |
-| chartreusin | 0.813 | 0.852 | 0.999 | 0.930 | 0.930 | 0.932 |
-| indanone | 0.897 | 0.923 | 1.000 | 0.992 | 0.992 | 0.997 |
+| pair | Bin | Tree | NN | ECHOS | Cosine | STCC | Local Contrast |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| menthol (two solvents) | 0.734 | 0.967 | 0.988 | 0.064 | 0.421 | 0.421 | **0.467** |
+| rotenone (re-measured) | 0.323 | 0.839 | 1.000 | 0.389 | 0.389 | 0.388 | **0.727** |
+| santonin | 0.973 | 0.993 | 1.000 | 1.000 | 1.000 | 1.000 | 0.999 |
+| chartreusin | 0.813 | 0.852 | 0.999 | 0.883 | 0.930 | 0.930 | 0.932 |
+| indanone | 0.897 | 0.923 | 1.000 | 0.992 | 0.992 | 0.992 | 0.997 |
 
 Over a large common window a different small molecule still supplies *some* peak near every peak
 and a similar mass-centre structure, so the NN distance and the tree overlap stay small — the same
@@ -513,6 +524,24 @@ almost no non-co-located intensity for mean-centring to penalize, so its benefit
 dense fingerprint that is the hard case this measure targets. The cosine baseline is a real,
 reproducible benchmark row in both harnesses (`cosine_similarity` in `hsqc_lcc.py`), not an
 asserted number.
+
+**Ablation — the lineshape blur buys smoothness, not separation, on the dense protein.** The
+complementary ablation keeps the mean-centred correlation and removes the Gaussian lineshape: this
+is exactly ECHOS-NMR [39], the Pearson correlation of five-point box-binned spectra that Amezcua and
+Szabo introduced for the higher-order-structure comparability of biologics and that has since been
+applied to 2D-HSQC titrations [40] and to diffusion-filtered 1D protein-observed screening [41].
+Evaluated on the same shared grid (`echos_similarity`), ECHOS matches STCC's separation on the
+single-decoy benchmark (0.77 vs 0.75; Table S2) and exceeds it on the two-decoy benchmark (0.60 vs
+0.57; Table S3), while its same-protein scores fall lower and less smoothly along the titration
+(0.78–0.95 vs 0.89–0.97; min same 0.71 vs 0.82 on the 23-point titration). STCC therefore inherits
+its discrimination from the centred correlation that ECHOS already computes; what the lineshape
+adds is the graded, monotone response to drift of §S6a (and Figure 1b), which keeps a titrating
+sample high, at the cost of a slightly higher decoy score. In the sparse $^1$H–$^{13}$C regime the
+same ablation goes the other way: without the lineshape, ECHOS collapses on the two genuinely
+shifted same-compound pairs (menthol 0.06, rotenone 0.39; Table S6), so its margin falls to 0.06
+against STCC's 0.37 (Table S5). The two ablations are therefore complementary — mean-centring
+carries the dense regime, the lineshape carries the sparse one — and STCC is the only measure in
+Table S5 that holds both.
 
 **Robustness — the gain is not a tuned parameter.** On the protein benchmark STCC beats the bin
 method across the whole physical blur range: separation is $\Sigma = 0.71$–$0.77$ at
@@ -670,7 +699,7 @@ multivariate workflows of NMR-based profiling [31]. A second, equally natural ap
 **higher-order-structure (HOS) comparability** of protein biotherapeutics — biosimilar-versus-
 originator, or before/after a formulation or process change — where the fold is confirmed by
 matching 2D-HSQC fingerprints and where 2D-NMR is an established, high-precision readout
-[32–37]. The dense-protein benchmark (§S8) exercises the distinct-fold end of that task — cleanly
+[32–37]; the ECHOS-NMR correlation used in that setting [39] is the un-blurred limit of STCC (§S10). The dense-protein benchmark (§S8) exercises the distinct-fold end of that task — cleanly
 separating fingerprints of different folds and tracking a titration smoothly — but not the subtle
 originator-versus-biosimilar discrimination, which falls in the intermediate-score regime and is
 left to future work (main text).
@@ -794,3 +823,13 @@ left to future work (main text).
 38. C. E. Hart, T. Kind, P. C. Dorrestein, D. Healey, D. Domingo-Fernández, *Weighting
     low-intensity MS/MS ions and m/z frequency for spectral library annotation*, J. Am. Soc. Mass
     Spectrom. **2024**, *35*, 266–274. doi:10.1021/jasms.3c00353.
+39. C. A. Amezcua, C. M. Szabo, *Assessment of higher order structure comparability in therapeutic
+    proteins using nuclear magnetic resonance spectroscopy*, J. Pharm. Sci. **2013**, *102*,
+    1724–1733. doi:10.1002/jps.23531.
+40. C. Peng, A. T. Namanja, E. Munoz, H. Wu, T. E. Frederick, M. Maestre-Martinez, I. I. Fernandez,
+    Q. Sun, C. Cobas, C. Sun, A. M. Petros, *Efficiently driving protein-based fragment screening and
+    lead discovery using two-dimensional NMR*, J. Biomol. NMR **2023**, *77*, 39–53.
+    doi:10.1007/s10858-022-00410-3.
+41. T. E. Frederick, A. T. Namanja, H. Wu, C. Sun, A. M. Petros, *Beyond isotopic labeling: expanding
+    the reach of protein-detect NMR in lead discovery*, ACS Med. Chem. Lett. **2025**, *16*, 688–692.
+    doi:10.1021/acsmedchemlett.4c00540.

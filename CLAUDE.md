@@ -37,7 +37,7 @@ Flat module layout, no package. Dependency order:
 spectrum_similarity.py   1D bin method + JCAMP `procs` parser (parse_jcamp, _number, upper_envelope)
    └─ hsqc_similarity.py 2D bin method + Bruker `2rr` reader -> Spectrum2D(ppm_f2, ppm_f1, intensity, source)
          ├─ hsqc_methods.py  Castillo quadtree, Pierens NN; owns the shared _window()/_overlap_ranges() preprocessing
-         └─ hsqc_lcc.py      STCC (CLI name `lcc`), un-centred cosine ablation, experimental local-contrast
+         └─ hsqc_lcc.py      STCC (CLI name `lcc`), un-centred cosine ablation, ECHOS baseline (`echos`: box bin + Pearson, no blur), experimental local-contrast
 bench*.py                harnesses; bench_nhsqc imports bench._methods, bench_retrieval imports bench_13c.METHODS
 ```
 

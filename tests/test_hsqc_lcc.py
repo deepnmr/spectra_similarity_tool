@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from hsqc_lcc import build_parser, cosine_similarity, lcc_similarity, local_contrast_similarity
+from hsqc_lcc import build_parser, cosine_similarity, echos_similarity, lcc_similarity, local_contrast_similarity
 from hsqc_similarity import Spectrum2D
 
 
@@ -205,3 +205,15 @@ def test_cli_keeps_lcc_default_and_accepts_local_contrast():
     parser = build_parser()
     assert parser.parse_args(["x", "y"]).method == "lcc"
     assert parser.parse_args(["x", "y", "--method", "local-contrast"]).method == "local-contrast"
+
+
+def test_echos_self_is_one_and_is_shift_brittle():
+    # ECHOS baseline = box-bin Pearson without lineshape blur: self-scores 1, but a sub-linewidth
+    # drift costs it more than STCC (the graded shift tolerance is what STCC adds on top of ECHOS).
+    reference = make_spectrum(REF, "ref")
+    drifted = make_spectrum([(3.05, 40.5, 0.1, 1.5, 1.0), (7.05, 120.5, 0.1, 1.5, 0.8)], "drift")
+    steps = dict(step_f2=KW["step_f2"], step_f1=KW["step_f1"])
+    assert echos_similarity(reference, reference, **steps)["similarity"] == 1.0
+    echos = echos_similarity(reference, drifted, **steps)["similarity"]
+    stcc = lcc_similarity(reference, drifted, **KW)["similarity"]
+    assert 0.0 < echos < stcc, (echos, stcc)
