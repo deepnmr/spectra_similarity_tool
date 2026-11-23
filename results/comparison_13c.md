@@ -51,18 +51,19 @@ method adds no alignment, peak picking, dependency, model, or tuning option.
 
 | pair | Bin | Bin +45° | Tree | NN | ECHOS | Cosine | STCC | Local Contrast |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| menthol, two solvents | 0.734 | 0.807 | 0.967 | 0.988 | 0.064 | 0.421 | 0.421 | **0.467** |
-| rotenone, re-measured | 0.323 | 0.344 | 0.839 | 1.000 | 0.389 | 0.389 | 0.388 | **0.727** |
+| menthol, 1H offset | 0.734 | 0.807 | 0.967 | 0.988 | 0.064 | 0.421 | 0.421 | **0.467** |
+| rotenone, intensity scale | 0.323 | 0.344 | 0.839 | 1.000 | 0.389 | 0.389 | 0.388 | **0.727** |
 | santonin | 0.973 | 0.976 | 0.993 | 1.000 | 1.000 | 1.000 | 1.000 | 0.999 |
 | chartreusin | 0.813 | 0.812 | 0.852 | 0.999 | 0.883 | 0.930 | 0.930 | **0.932** |
 | indanone | 0.897 | 0.900 | 0.923 | 1.000 | 0.992 | 0.992 | 0.992 | **0.997** |
 
-Tree and nearest-neighbour scoring keeps shifted positive pairs high, but their
+Tree and nearest-neighbour scoring keeps the two hard positive pairs high, but their
 different-compound means are also high. The ECHOS baseline (Pearson on a 5-point box
-bin, no Gaussian lineshape — STCC minus the blur) collapses on the two genuinely
-shifted pairs (menthol 0.06, rotenone 0.39), which is why its margin is only 0.06
+bin, no Gaussian lineshape — STCC minus the blur) collapses on the one genuinely
+shifted pair (menthol 0.06 vs STCC 0.42; rotenone, which differs in intensity scale rather
+than position, scores 0.39 under both), which is why its margin is only 0.06
 against STCC's 0.37: on sparse sticks the lineshape blur is what keeps a shifted
-same-compound pair above the different-compound scores. Local Contrast notably lifts the shifted
+same-compound pair above the different-compound scores. Local Contrast notably lifts the
 rotenone pair while retaining a near-zero different-compound mean.
 
 ## Held-out evaluation

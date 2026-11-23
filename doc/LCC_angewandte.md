@@ -187,7 +187,7 @@ $$
 
 then takes the clipped zero-lag cosine of $F_x$ and $F_y$. The square root reduces domination by a
 few intense peaks, an intensity-weighting rationale used in mass-spectral library search but not
-direct evidence of NMR performance;$^{[42]}$ the fixed $3\sigma$ background subtraction removes
+direct evidence of NMR performance;$^{[39]}$ the fixed $3\sigma$ background subtraction removes
 broad baseline and common
 low-frequency density. The factor three is fixed by design rather than exposed as another tuning
 parameter. The candidate adds no dependency, alignment, peak picking or model and preserves the
@@ -197,13 +197,14 @@ false-positive rate improves without degrading the other regime.
 
 The measure has the properties one expects of a similarity: self-similarity is exactly one, the
 score is exactly symmetric, and it is monotone in the drift of an isolated peak (all verified in
-the test suite; Supporting Information). The implementation is pure NumPy,$^{[39]}$ reads
+the test suite; Supporting Information). The implementation is pure NumPy,$^{[40]}$ reads
 processed Bruker data directly, and requires neither peak picking nor an external solver. On a
 representative dense pair, STCC takes 12.8 ms and the experimental local-contrast extension takes
-17.2 ms (1.34$\times$; Apple Silicon, single core). A 46-test suite (all passing) checks
+17.2 ms (1.34$\times$; Apple Silicon, single core). A 46-test suite checks
 self-similarity, symmetry, boundedness, related-beats-unrelated ordering, monotonicity in drift,
 intensity-scale and render-grid invariance, explicit invalid-input errors, and the existing
-regressions; figures use Matplotlib.$^{[40]}$ A full derivation with proofs is given in the
+regressions; on a public checkout 46 tests pass and the one dense-data regression is skipped
+because it needs the non-public spectra. Figures use Matplotlib.$^{[41]}$ A full derivation with proofs is given in the
 Supporting Information.
 
 We benchmarked STCC against the three reference methods on two deliberately **opposite** regimes,
@@ -238,8 +239,8 @@ Supporting Information). As ligand is added the chemical-shift perturbation grow
 **smoothly** from 0.98 to a plateau near 0.82 — its graded shift tolerance acting on a real
 titration — while both decoys sit far below every titration point (OAA 0.19, EphB3 0.41). STCC keeps
 a separation of 0.57 and margin of 0.41: both decoy proteins clear *every*
-same-protein score by a comfortable gap, whereas the tree and nearest-neighbour margins are a
-knife-edge (0.12 and 0.02, a single noisy titration point from crossing). The un-centred cosine
+same-protein score by a comfortable gap, whereas the tree and nearest-neighbour margins are
+much narrower (0.12 and 0.02; the latter is a knife-edge). The un-centred cosine
 trails (0.46 / 0.35), so mean-centring still earns the gap against a genuine negative distribution. This test is harder than the single-decoy benchmark on both axes —
 a longer titration with larger shifts and a second, tougher decoy — so STCC's dense-regime margin
 is not an artefact of one negative spectrum. The experimental
@@ -248,27 +249,29 @@ and margin to 0.67 and 0.52, respectively (Table 2).
 
 *Sparse small-molecule $^1$H–$^{13}$C.* To probe the opposite regime — and to replace the single
 negative spectrum above with a large negative set — we used public HSQC peak lists from the
-simpleNMR example set$^{[41]}$ for five compounds each recorded twice (one nominal sixth pair was
+simpleNMR example set$^{[42]}$ for five compounds, each represented by two distinct peak lists (one nominal sixth pair was
 excluded on inspection as a byte-identical duplicate; Supporting Information), and asked each
 method to score the 5 same-compound pairs above the 40 different-compound pairs, inside a
 $^1$H 0–10 $\times$ $^{13}$C 0–165 ppm window. The peak lists are rasterized as sticks, after which
-each method applies its own shift-tolerance processing; this removes the earlier double blur.
+each method applies its own shift-tolerance processing, so no method receives a pre-blurred input.
 Among the primary methods STCC again leads (mean same 0.746, mean different 0.0016, separation
 0.745, margin 0.374). The bin method is far stronger here than on the dense
-fingerprint (0.29): with few, well-separated peaks its hard bins rarely straddle a peak. The ECHOS
+fingerprint (separation 0.67 vs 0.29): with few, well-separated peaks its hard bins rarely straddle a peak. The ECHOS
 baseline, which tied STCC on the dense protein, now falls behind (separation 0.67, margin 0.06):
-without a lineshape its box bin scores the two genuinely shifted same-compound pairs 0.06 and 0.39,
-so here it is the Gaussian blur, not mean-centring, that keeps the same compound above every
+without a lineshape its box bin scores the offset menthol pair 0.06 where STCC scores 0.42 (the
+rotenone pair, whose peak positions agree, scores 0.39 under both), so here it is the Gaussian blur, not mean-centring, that keeps the same compound above every
 different one. The
 tree and nearest-neighbour methods, however, **leave the two classes barely separable in this
 regime too** (margins 0.07 and 0.04, despite separations of 0.41 and 0.10): over a wide window a
-different molecule still supplies a near neighbour for every peak. Their shift tolerance is
-real — per pair, it keeps two shifted recordings of the same compound high (0.83–1.00,
-where STCC scores 0.39–0.42) — but it tolerates
-*everything*, so it never becomes discrimination. STCC recovers that same tolerance
+different molecule still supplies a near neighbour for every peak. Their tolerance is
+real — on the two hardest same-compound pairs (menthol, whose two peak lists differ by a
+near-uniform $^1$H offset of about 0.09 ppm, and rotenone, whose peak positions agree but whose
+intensities are encoded on different scales) they score 0.84–1.00, where STCC scores 0.39–0.42 —
+but it tolerates *everything*, so it never becomes discrimination. STCC recovers that same tolerance
 controllably, through its blur width, without surrendering the between-compound contrast
 (Supporting Information). The experimental Local-Contrast extension lifts the rotenone pair from
-0.388 to 0.727 while keeping the different-compound mean at 0.0041; overall it reaches separation
+0.388 to 0.727 — an intensity-encoding rather than a positional difference, which its square-root
+compression absorbs — while keeping the different-compound mean at 0.0041; overall it reaches separation
 0.820 and margin 0.434. Its square-root transform and local background subtraction therefore
 improve the descriptive sparse separation without changing peak positions or aligning spectra.
 
@@ -315,7 +318,7 @@ local-contrast feature is a promising experimental extension, but the default re
 validated STCC until it improves held-out operating error rather than descriptive separation alone. We are candid
 about scope: this is a **methodological** contribution — a robust, reproducible scoring primitive
 for sameness testing, not a new chemical discovery — and although its most decisive number, the dense-protein
-margin, was first measured against a single decoy, we now show it holds against two decoy folds on
+margin, was first measured against a single decoy, we show it holds against two decoy folds on
 an independent titration (Table 2), alongside the fully public sparse benchmark and retrieval test.
 And the register is deliberately that of a scoring primitive, not a finished assay: STCC supplies the
 similarity score a sameness test thresholds, while fixing the equivalence bound and characterizing
@@ -405,7 +408,7 @@ therefore improves descriptive separation without improving the held-out operati
 apo–olsalazine titration (23 same-protein points, exps 4–48) scored against **two** decoy proteins
 (OAA, EphB3) in the $^1$H 6.5–10 $\times$ $^{15}$N 105–130 ppm window. Separation = mean same − mean
 decoy; margin = worst same − worst decoy. Higher is better; every method self-scores 1.00.
-Computed by `python3 bench_nhsqc.py` (harness and derived scores `results/nhsqc_dense.json` are in
+Computed by `python3.11 bench_nhsqc.py` (harness and derived scores `results/nhsqc_dense.json` are in
 the repository; raw spectra per the Data Availability Statement).
 
 | Method | mean same | min same | OAA | EphB3 |
@@ -578,17 +581,17 @@ J. L. Markley, J. Ionides, E. D. Laue, *Proteins* **2005**, *59*, 687–696.
 
 [38] F. Savorani, G. Tomasi, S. B. Engelsen, *J. Magn. Reson.* **2010**, *202*, 190–202.
 
-[39] C. R. Harris, K. J. Millman, S. J. van der Walt, R. Gommers, P. Virtanen, D. Cournapeau,
+[39] C. Engler Hart, T. Kind, P. C. Dorrestein, D. Healey, D. Domingo-Fernández,
+*J. Am. Soc. Mass Spectrom.* **2024**, *35*, 266–274.
+
+[40] C. R. Harris, K. J. Millman, S. J. van der Walt, R. Gommers, P. Virtanen, D. Cournapeau,
 E. Wieser, J. Taylor, S. Berg, N. J. Smith, R. Kern, M. Picus, S. Hoyer, M. H. van Kerkwijk,
 M. Brett, A. Haldane, J. F. del Río, M. Wiebe, P. Peterson, P. Gérard-Marchant, K. Sheppard,
 T. Reddy, W. Weckesser, H. Abbasi, C. Gohlke, T. E. Oliphant, *Nature* **2020**, *585*, 357–362.
 
-[40] J. D. Hunter, *Comput. Sci. Eng.* **2007**, *9*, 90–95.
+[41] J. D. Hunter, *Comput. Sci. Eng.* **2007**, *9*, 90–95.
 
-[41] E. Hughes, A. M. Kenwright, *Magn. Reson. Chem.* **2024**, *62*, 556–565.
-
-[42] C. E. Hart, T. Kind, P. C. Dorrestein, D. Healey, D. Domingo-Fernández,
-*J. Am. Soc. Mass Spectrom.* **2024**, *35*, 266–274.
+[42] E. Hughes, A. M. Kenwright, *Magn. Reson. Chem.* **2024**, *62*, 556–565.
 
 ---
 

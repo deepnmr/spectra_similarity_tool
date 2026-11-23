@@ -24,7 +24,7 @@ to obtain them.
 
 1. L. Bodis, A. Ross, E. Pretsch, *A novel spectra similarity measure*,
    Chemometrics and Intelligent Laboratory Systems 85 (2007) 1-8.
-   doi:10.1016/j.chemolab.2006.03.006 — the 1D bin method.
+   doi:10.1016/j.chemolab.2005.10.002 — the 1D bin method.
 2. L. Bodis, A. Ross, J. Bodis, E. Pretsch, *Automatic compatibility tests of
    HSQC NMR spectra with proposed structures of chemical compounds*, Talanta 79
    (2009) 1379-1386. doi:10.1016/j.talanta.2009.06.017 — the 2D bin extension.
