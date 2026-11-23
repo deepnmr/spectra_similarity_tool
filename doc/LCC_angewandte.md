@@ -200,7 +200,7 @@ score is exactly symmetric, and it is monotone in the drift of an isolated peak 
 the test suite; Supporting Information). The implementation is pure NumPy,$^{[40]}$ reads
 processed Bruker data directly, and requires neither peak picking nor an external solver. On a
 representative dense pair, STCC takes 12.8 ms and the experimental local-contrast extension takes
-17.2 ms (1.34$\times$; Apple Silicon, single core). A 46-test suite checks
+17.2 ms (1.34$\times$; Apple Silicon, single core). A 47-test suite checks
 self-similarity, symmetry, boundedness, related-beats-unrelated ordering, monotonicity in drift,
 intensity-scale and render-grid invariance, explicit invalid-input errors, and the existing
 regressions; on a public checkout 46 tests pass and the one dense-data regression is skipped
@@ -282,7 +282,10 @@ compound-cluster bootstrap gives Local Contrast − STCC $\Delta=0.0757$
 ($[0.0014,0.2057]$, $P(\Delta\leq0)=0.0067$), supporting a descriptive gain on these five
 compounds. Ranking and threshold operation provide the promotion check: both variants have
 AUROC = AUPRC = top-1 = MRR = 1.00, and both have zero leave-one-compound-out classification error,
-false-negative rate and rejection false-positive rate. Thus the candidate does not improve the
+false-negative rate and rejection false-positive rate. The ECHOS baseline ranks just as perfectly,
+but its cluster interval is the widest of any method (0.315–0.973) and its held-out threshold
+misses one of the five same-compound pairs (false-negative rate 0.20) — the offset menthol pair
+that its box bin scores 0.06; the bin method likewise misses one (the rotenone pair). Thus the candidate does not improve the
 held-out decision boundary even though its separation is larger. The expanded dense result is used
 as regression evidence, not as an independent held-out estimate because its same-class points are
 one autocorrelated titration. Default promotion is reserved for lower held-out threshold error or
@@ -346,7 +349,7 @@ once tolerant of the small shifts real chemistry induces and unforgiving of genu
 that operation more trustworthy wherever it is used. Insofar as NMR remains one of chemistry's
 primary windows onto matter — on molecules large and small, in solution, at atomic resolution —
 sharpening the way we compare its fingerprints sharpens the readout itself. The full derivation, all
-three benchmark protocols, every numerical table with confidence intervals, and the 46-test suite
+three benchmark protocols, every numerical table with confidence intervals, and the 47-test suite
 are provided as Supporting Information; the software is freely available under the MIT license.
 
 ## Figures
@@ -372,7 +375,8 @@ Information rather than mixed into this original dense comparison.](../results/c
 
 ![**Figure 3.** Statistical strength and the mean-centring ablation. **(a)** Sparse
 $^1$H–$^{13}$C separation with compound-cluster bootstrap 95% CIs ($10^4$ resamples of the five
-compounds), including experimental Local Contrast (purple). The paired Local Contrast − STCC gain
+compounds), including experimental Local Contrast (purple) and the ECHOS baseline, whose interval
+(0.31–0.97) is the widest because its offset menthol pair collapses. The paired Local Contrast − STCC gain
 is $\Delta=0.076$ ($[0.001,0.206]$), while both variants have identical perfect ranking and zero
 held-out threshold error (Table S9). **(b)** Replacing mean-centred STCC with the un-centred cosine
 costs 0.16 of separation on the dense protein fingerprint (0.75→0.59) but only 0.0002 on the sparse
@@ -460,7 +464,7 @@ The author declares no conflict of interest.
 ## Data Availability Statement
 
 The software (STCC, experimental Local Contrast, the three reference methods, the
-un-centred-cosine ablation, all benchmark harnesses, the tabulated scores and the 46-test
+un-centred-cosine and ECHOS ablations, all benchmark harnesses, the tabulated scores and the 47-test
 suite) is freely available under the MIT
 license at https://github.com/deepnmr/spectra_similarity_tool. The **sparse $^1$H–$^{13}$C
 benchmark and the dereplication/retrieval experiment are fully reproducible from public data**:
