@@ -302,7 +302,7 @@ recorded twice, scoring 5 same-compound pairs against 40 different-compound pair
 Each method now consumes the stick peak list directly and applies its own smoothing;
 this removes the former double blur. STCC separates by 0.7447 (margin 0.3736), while
 the experimental local-contrast candidate reaches 0.8203 (margin 0.4336).
-Run `python3.11 bench_13c.py`; details in
+Run `uv run python bench_13c.py` (about 15 s); details in
 [`results/comparison_13c.md`](results/comparison_13c.md).
 
 ## References
@@ -341,5 +341,6 @@ It uses `SI`, `OFFSET`, `SW_p`, `SF`, `BYTORDP`, `DTYPP`, and `NC_proc` from
 ## Test
 
 ```bash
-python3 -m pytest
+uv run pytest          # uv reads pyproject.toml/uv.lock and builds the environment
+python3 -m pytest      # or any Python >= 3.11 with numpy and pytest installed
 ```

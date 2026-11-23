@@ -157,14 +157,14 @@ def _smooth_axis(matrix: np.ndarray, kernel: np.ndarray, axis: int) -> np.ndarra
     )
 
 
-def prepare_spectrum_2d(
+def _baselined_window(
     spectrum: Spectrum2D,
     range_f2: tuple[float, float],
     range_f1: tuple[float, float],
     baseline: str = "clip",
-    smooth_f2: float = 0.0,
-    smooth_f1: float = 0.0,
-) -> PreparedSpectrum2D:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Baseline-correct and cut to a ppm window -> (ppm_f2, ppm_f1, intensity[f1, f2]).
+    The one preprocessing step every 2D method (and the plot) shares."""
     intensity = spectrum.intensity.astype(np.float64, copy=True)
     if baseline == "clip":
         intensity[intensity < 0] = 0.0
@@ -185,6 +185,18 @@ def prepare_spectrum_2d(
     ppm_f2 = spectrum.ppm_f2[mask_f2]
     ppm_f1 = spectrum.ppm_f1[mask_f1]
     sub = intensity[np.ix_(mask_f1, mask_f2)]
+    return ppm_f2, ppm_f1, sub
+
+
+def prepare_spectrum_2d(
+    spectrum: Spectrum2D,
+    range_f2: tuple[float, float],
+    range_f1: tuple[float, float],
+    baseline: str = "clip",
+    smooth_f2: float = 0.0,
+    smooth_f1: float = 0.0,
+) -> PreparedSpectrum2D:
+    ppm_f2, ppm_f1, sub = _baselined_window(spectrum, range_f2, range_f1, baseline)
 
     area = np.outer(_axis_spacing(ppm_f1), _axis_spacing(ppm_f2))
     weight = sub * area
@@ -291,6 +303,12 @@ def hsqc_similarity(
     # Map both spectra to the same (optionally rotated) unit-square frame and bin there.
     ux, vx = _rotated_unit_coords(prep_x, range_f2, range_f1, rotate_deg)
     uy, vy = _rotated_unit_coords(prep_y, range_f2, range_f1, rotate_deg)
+    # A zero-weight point adds exactly 0.0 to its bin, so dropping it leaves every
+    # histogram bit-identical while the n-grid loop below stops re-binning empty points
+    # (the whole grid for stick spectra, the clipped half for real data).
+    keep_x, keep_y = wx != 0, wy != 0
+    ux, vx, wx = ux[keep_x], vx[keep_x], wx[keep_x]
+    uy, vy, wy = uy[keep_y], vy[keep_y], wy[keep_y]
     box_lo, box_hi = _rotated_bbox(rotate_deg)
 
     lo2, hi2 = sorted(range_f2)
@@ -312,6 +330,7 @@ def hsqc_similarity(
     si_star = np.clip(upper_envelope(si), 0.0, 1.0)
 
     return {
+        "method": "bin",
         "similarity": float(np.mean(si_star)),
         "n_grids": int(max_n),
         "range_f2": [float(lo2), float(hi2)],
@@ -398,21 +417,7 @@ def save_similarity_plot_2d(
 
 
 def _contour_window(ax, spectrum, range_f2, range_f1, baseline, contour_levels) -> None:
-    intensity = spectrum.intensity.astype(np.float64, copy=True)
-    if baseline == "clip":
-        intensity[intensity < 0] = 0.0
-    elif baseline == "abs":
-        np.abs(intensity, out=intensity)
-    elif baseline == "shift":
-        intensity -= intensity.min()
-
-    lo2, hi2 = sorted(range_f2)
-    lo1, hi1 = sorted(range_f1)
-    mask_f2 = (spectrum.ppm_f2 >= lo2) & (spectrum.ppm_f2 <= hi2)
-    mask_f1 = (spectrum.ppm_f1 >= lo1) & (spectrum.ppm_f1 <= hi1)
-    ppm_f2 = spectrum.ppm_f2[mask_f2]
-    ppm_f1 = spectrum.ppm_f1[mask_f1]
-    sub = intensity[np.ix_(mask_f1, mask_f2)]
+    ppm_f2, ppm_f1, sub = _baselined_window(spectrum, range_f2, range_f1, baseline)
     peak = float(sub.max())
     if peak <= 0:
         return
