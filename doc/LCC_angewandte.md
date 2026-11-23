@@ -408,7 +408,7 @@ therefore improves descriptive separation without improving the held-out operati
 apo–olsalazine titration (23 same-protein points, exps 4–48) scored against **two** decoy proteins
 (OAA, EphB3) in the $^1$H 6.5–10 $\times$ $^{15}$N 105–130 ppm window. Separation = mean same − mean
 decoy; margin = worst same − worst decoy. Higher is better; every method self-scores 1.00.
-Computed by `python3.11 bench_nhsqc.py` (harness and derived scores `results/nhsqc_dense.json` are in
+Computed by `uv run python bench_nhsqc.py` (harness and derived scores `results/nhsqc_dense.json` are in
 the repository; raw spectra per the Data Availability Statement).
 
 | Method | mean same | min same | OAA | EphB3 |

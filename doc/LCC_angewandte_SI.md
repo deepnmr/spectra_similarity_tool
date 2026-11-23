@@ -624,36 +624,36 @@ explicit errors.
 
 **Reproduction.** All benchmark harnesses are in the repository:
 
-- `python3.11 bench.py --prl3 DIR --oaa DIR` — dense protein $^1$H–$^{15}$N benchmark (Table S2),
+- `uv run python bench.py --prl3 DIR --oaa DIR` — dense protein $^1$H–$^{15}$N benchmark (Table S2),
   printing the per-comparison table (or JSON with `--json`); the published run is recorded in
   `results/method_comparison.{csv,json}` and `results/lcc_comparison.png`.
-- `python3.11 bench_nhsqc.py` — expanded dense benchmark with two decoy proteins (Tables S3, S4;
+- `uv run python bench_nhsqc.py` — expanded dense benchmark with two decoy proteins (Tables S3, S4;
   main-text Table 2), reading the `Nhsqc/` PRL3–olsalazine titration and OAA/EphB3 spectra and
   writing `results/nhsqc_dense.json`.
-- `python3.11 bench_13c.py` — sparse small-molecule $^1$H–$^{13}$C benchmark (Tables S5, S6),
+- `uv run python bench_13c.py` — sparse small-molecule $^1$H–$^{13}$C benchmark (Tables S5, S6),
   downloading the simpleNMR peak lists on first run, rasterizing sticks and writing
   `results/comparison_13c.json`. It
   excludes the byte-identical olivetol pair and raises on any same-pair that renders identically.
-- `python3.11 bench_retrieval.py` — top-1/MRR, AUROC/AUPRC, leave-one-compound-out threshold error,
+- `uv run python bench_retrieval.py` — top-1/MRR, AUROC/AUPRC, leave-one-compound-out threshold error,
   rejection FPR and compound-cluster bootstrap comparisons on the sparse regime (Table S9),
   writing `results/retrieval_13c.json`.
-- `python3.11 results/make_plots.py` — regenerates Figure 2 (and `comparison_13c.png`) from the
-  JSON; `python3.11 results/make_fig3.py` — regenerates Figure 3 (bootstrap CIs + ablation) from
-  `retrieval_13c.json`; `python3.11 results/make_schematic.py` — regenerates Figure 1;
-  `python3.11 results/make_si_figs.py` — regenerates the ten SI method figures (S1–S10).
+- `uv run python results/make_plots.py` — regenerates Figure 2 (and `comparison_13c.png`) from the
+  JSON; `uv run python results/make_fig3.py` — regenerates Figure 3 (bootstrap CIs + ablation) from
+  `retrieval_13c.json`; `uv run python results/make_schematic.py` — regenerates Figure 1;
+  `uv run python results/make_si_figs.py` — regenerates the ten SI method figures (S1–S10).
 
 **Test suite.** A 46-test suite checks the properties proved in §S5 and the
 Local-Contrast contract: exact self-score, symmetry, $[0,1]$ range, monotonic drift response,
 global intensity-scale invariance, baseline/noise related-above-unrelated ordering, half-step grid
 invariance and explicit invalid-input errors. Existing regressions cover mean-centring, the `abs`
-baseline and the duplicate-pair guard. Run with `python3.11 -m pytest`; on a public checkout 46 tests pass and the dense-data regression
+baseline and the duplicate-pair guard. Run with `uv run pytest`; on a public checkout 46 tests pass and the dense-data regression
 is skipped because it needs the non-public spectra (files under `tests/`: `test_hsqc_lcc.py`, `test_hsqc_methods.py`, `test_hsqc_similarity.py`,
 `test_bench_13c.py`, `test_bench_nhsqc.py`, `test_bench_retrieval.py`, `test_spectrum_similarity.py`).
 
 ## S13 Statistical strength: bootstrap CIs and a retrieval test
 
 These metrics run on the public sparse $^1$H–$^{13}$C data and are reproducible with
-`python3.11 bench_retrieval.py` (writes `results/retrieval_13c.json`).
+`uv run python bench_retrieval.py` (writes `results/retrieval_13c.json`).
 
 **Bootstrap confidence intervals and operating metrics.** The sparse-regime separation is
 resampled $10^4$ times at the level of the five **compounds** (whole compounds rather than the 45
