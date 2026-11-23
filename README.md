@@ -306,8 +306,11 @@ default and `local-contrast` remains experimental.
 
 ### Cross-regime check on `1H-13C` (sparse small molecules)
 
-The same benchmark on **sparse small-molecule `1H-13C` HSQC** uses five compounds
-recorded twice, scoring 5 same-compound pairs against 40 different-compound pairs.
+The same benchmark on **sparse small-molecule `1H-13C` HSQC** uses five compounds,
+each represented by two distinct public peak lists, scoring 5 same-compound pairs against 40
+different-compound pairs. Two pairs are hard: the menthol lists differ by a near-uniform `1H`
+offset of about 0.09 ppm, and the rotenone lists agree in peak position but encode intensities on
+different scales.
 Each method now consumes the stick peak list directly and applies its own smoothing;
 this removes the former double blur. STCC separates by 0.7447 (margin 0.3736), while
 the experimental local-contrast candidate reaches 0.8203 (margin 0.4336).

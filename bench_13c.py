@@ -3,12 +3,12 @@
 
 Complements bench.py (dense protein 1H-15N) with the sparse small-molecule 1H-13C
 regime the tree/NN methods were designed for. Data: public HSQC peak lists from the
-simpleNMR example set (EricHughesABC/simpleNMR) — five compounds each recorded twice
-(a variant pair, e.g. menthol in two solvents), giving 10 spectra. A good measure
+simpleNMR example set (EricHughesABC/simpleNMR) — five compounds, each represented
+by two distinct peak lists (a variant pair), giving 10 spectra. A good measure
 scores the 5 same-compound pairs HIGH and the 40 different-compound pairs LOW.
 
 The peak lists are rasterized to a synthetic 2D stick spectrum so each method applies
-its own shift-tolerance processing. Run with python3.11 (numpy/matplotlib).
+its own shift-tolerance processing. Run with `uv run python bench_13c.py`.
 The peak-list data are downloaded on first run (not redistributed here).
 """
 from __future__ import annotations
@@ -28,8 +28,8 @@ RAW = "https://raw.githubusercontent.com/EricHughesABC/simpleNMR/main/examplePro
 # NOTE: the olivetol pair (Olivetol/Olivetol_A) was dropped -- its two files are BYTE-IDENTICAL
 # (same MD5, identical peak lists), so it was a self-comparison scoring 1.00 for every method,
 # an information-free positive that inflated mean_same. run() also guards against any such
-# duplicate at load time (see _assert_distinct). The remaining 5 pairs are genuinely distinct
-# recordings/re-picks (verified: different peak coordinates).
+# duplicate at load time (see _assert_distinct). The remaining 5 pairs are distinct peak lists
+# (verified: menthol differs in peak position, rotenone in intensity scale; none is identical).
 PAIRS = [
     ("menthol",     ("menthol_CDCl3", "menthol_CDCl3.json"), ("menthol_eeh", "menthol_eeh.json")),
     ("rotenone",    ("Rotenone", "Rotenone.json"), ("Rotenone-bckup", "Rotenone.json")),
