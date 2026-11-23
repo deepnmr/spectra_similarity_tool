@@ -16,3 +16,6 @@ doc/Bodis2009_Talanta_2D_HSQC_bins.pdf
 # Raw Bruker N-HSQC data (341 MB, 1112 files): available from author, DOI-deposit before submission.
 # The derived matrices (results/nhsqc_dense.json) + harness (bench_nhsqc.py) ARE tracked.
 Nhsqc/
+
+# uv environment
+.venv/

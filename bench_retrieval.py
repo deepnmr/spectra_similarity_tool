@@ -11,8 +11,8 @@ Metrics per method:
   - AUROC / AUPRC and leave-one-compound-out threshold classification
   - separation with a bootstrap 95% CI (resampling the 45 unordered pairs)
 
-Reuses bench_13c's loader/methods/pairs (olivetol duplicate already excluded there). Slow because
-tree/NN are slow on the large grid; run once, writes results/retrieval_13c.json.
+Reuses bench_13c's loader/methods/pairs (olivetol duplicate already excluded there).
+Writes results/retrieval_13c.json.
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from pathlib import Path
 
 import numpy as np
 
-from bench_13c import METHODS, PAIRS, load_peaklist, run as _agg_run  # noqa: F401
+from bench_13c import METHODS, PAIRS, download, load_peaklist
 
 
 def _matrix(specs, names, fn):
@@ -187,6 +187,7 @@ def cluster_paired_diff(sa, cpa, sb, cpb, comps, iters=10000, seed=2):
 
 def main() -> int:
     data_dir = Path("data_13c")
+    download(data_dir)
     names = [v for _, a, b in PAIRS for v in (a[0], b[0])]
     comp = {v: c for c, a, b in PAIRS for v in (a[0], b[0])}
     specs = {n: load_peaklist(data_dir / f"{n}.json") for n in names}

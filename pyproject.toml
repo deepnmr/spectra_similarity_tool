@@ -1,0 +1,15 @@
+[project]
+name = "spectra-similarity-tool"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = ["numpy"]
+
+[dependency-groups]
+dev = ["pytest", "matplotlib"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

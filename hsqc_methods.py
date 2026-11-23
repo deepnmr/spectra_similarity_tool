@@ -28,7 +28,9 @@ from typing import Iterable
 
 import numpy as np
 
-from hsqc_similarity import Spectrum2D, _axis_spacing, _overlap_range, _paired_range, read_bruker_2d
+from hsqc_similarity import (
+    Spectrum2D, _axis_spacing, _baselined_window, _overlap_range, _paired_range, read_bruker_2d,
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -49,26 +51,7 @@ def _window(
     baseline: str = "clip",
     norm: float = 1.0,
 ) -> Windowed2D:
-    intensity = spectrum.intensity.astype(np.float64, copy=True)
-    if baseline == "clip":
-        intensity[intensity < 0] = 0.0
-    elif baseline == "abs":  # sign encodes multiplicity (edited HSQC CH2), not absence
-        np.abs(intensity, out=intensity)
-    elif baseline == "shift":
-        intensity -= intensity.min()
-    elif baseline != "none":
-        raise ValueError(f"Unknown baseline mode: {baseline}")
-
-    lo2, hi2 = sorted(range_f2)
-    lo1, hi1 = sorted(range_f1)
-    mask_f2 = (spectrum.ppm_f2 >= lo2) & (spectrum.ppm_f2 <= hi2)
-    mask_f1 = (spectrum.ppm_f1 >= lo1) & (spectrum.ppm_f1 <= hi1)
-    if not np.any(mask_f2) or not np.any(mask_f1):
-        raise ValueError(f"{spectrum.source} has no points in requested ppm window")
-
-    ppm_f2 = spectrum.ppm_f2[mask_f2]
-    ppm_f1 = spectrum.ppm_f1[mask_f1]
-    sub = intensity[np.ix_(mask_f1, mask_f2)]
+    ppm_f2, ppm_f1, sub = _baselined_window(spectrum, range_f2, range_f1, baseline)
     weight = sub * np.outer(_axis_spacing(ppm_f1), _axis_spacing(ppm_f2))
     total = float(weight.sum())
     if total <= 0:
@@ -253,7 +236,6 @@ def pick_peaks(
     peak = float(w.max())
     if peak <= 0:
         return np.zeros((0, 3))
-    interior = np.ones_like(w, dtype=bool)
     greater = np.ones_like(w, dtype=bool)
     for dr in (-1, 0, 1):
         for dc in (-1, 0, 1):
@@ -266,7 +248,7 @@ def pick_peaks(
             c_dst = slice(max(0, dc), w.shape[1] - max(0, -dc))
             shifted[r_dst, c_dst] = w[r_src, c_src]
             greater &= w >= shifted
-    mask = greater & interior & (w >= threshold_frac * peak)
+    mask = greater & (w >= threshold_frac * peak)
     rows, cols = np.nonzero(mask)
     if rows.size == 0:
         return np.zeros((0, 3))
