@@ -7,7 +7,7 @@ small-molecule `1H-13C` HSQC peak lists.
 
 Public peak lists come from the
 [simpleNMR example set](https://github.com/EricHughesABC/simpleNMR). Five
-compounds have two genuinely distinct recordings, giving 5 same-compound pairs
+compounds have two distinct peak lists, giving 5 same-compound pairs
 and 40 different-compound pairs. A nominal olivetol pair is excluded because its
 two files are byte-identical; `bench_13c.py` rejects any such duplicate.
 
