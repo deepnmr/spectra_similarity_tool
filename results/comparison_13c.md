@@ -21,8 +21,8 @@ double blurring STCC-family methods. Every comparison uses the same fixed window
 Regenerate with:
 
 ```bash
-python3.11 bench_13c.py
-python3.11 bench_retrieval.py
+uv run python bench_13c.py
+uv run python bench_retrieval.py
 ```
 
 ## Aggregate results
