@@ -624,6 +624,9 @@ explicit errors.
 
 **Reproduction.** All benchmark harnesses are in the repository:
 
+The Python environment is pinned by `pyproject.toml` and `uv.lock` (NumPy; pytest and Matplotlib
+for the tests and figures), so `uv run` rebuilds it without manual installation.
+
 - `uv run python bench.py --prl3 DIR --oaa DIR` — dense protein $^1$H–$^{15}$N benchmark (Table S2),
   printing the per-comparison table (or JSON with `--json`); the published run is recorded in
   `results/method_comparison.{csv,json}` and `results/lcc_comparison.png`.
@@ -642,7 +645,7 @@ explicit errors.
   `retrieval_13c.json`; `uv run python results/make_schematic.py` — regenerates Figure 1;
   `uv run python results/make_si_figs.py` — regenerates the ten SI method figures (S1–S10).
 
-**Test suite.** A 46-test suite checks the properties proved in §S5 and the
+**Test suite.** A 47-test suite checks the properties proved in §S5 and the
 Local-Contrast contract: exact self-score, symmetry, $[0,1]$ range, monotonic drift response,
 global intensity-scale invariance, baseline/noise related-above-unrelated ordering, half-step grid
 invariance and explicit invalid-input errors. Existing regressions cover mean-centring, the `abs`
@@ -670,22 +673,46 @@ AUPRC of 1.00, top-1 and MRR of 1.00, zero leave-one-compound-out error and zero
 false-negative rate. The candidate therefore improves descriptive separation on these five
 compounds without improving the held-out decision boundary. It remains experimental.
 
+The same held-out test separates the two STCC ablations (Table S9). The un-centred cosine is
+indistinguishable from STCC here (interval 0.508–0.982, zero held-out error), as expected in the
+sparse regime. The ECHOS baseline also ranks perfectly, but it has the widest cluster interval of
+any method (0.315–0.973), and when menthol is the held-out compound the threshold learned from the
+other four misses its offset pair (ECHOS score 0.06): a false-negative rate of 0.20 (one of five
+same-compound pairs) and a leave-one-compound-out error of 0.012 (one of 85 held-out decisions),
+with no false positive. The bin method incurs the same held-out outcome through a different pair
+(rotenone, 0.32). The shift-tolerant tree and NN methods, like STCC, incur no held-out error on
+this small set despite their narrow margins (Table S5). The cluster intervals of STCC and ECHOS
+overlap, so the difference in their sparse *separation* is not resolved on five compounds; what
+distinguishes them is the held-out miss and the margin (0.37 vs 0.06).
+
 **Table S9.** Current stick-input sparse $^1$H–$^{13}$C evaluation. The CI is the
 compound-cluster interval; top-1 and MRR [25] use the 10-spectrum retrieval library.
 
 | method | separation | cluster 95% CI | AUROC | AUPRC |
 | --- | :---: | :---: | :---: | :---: |
-| **STCC (default)** | 0.745 | 0.508–0.982 | 1.00 | 1.00 |
 | **Local Contrast (experimental)** | **0.820** | 0.623–0.985 | 1.00 | 1.00 |
+| **STCC (default)** | 0.745 | 0.508–0.982 | 1.00 | 1.00 |
+| Cosine, un-centred (STCC ablation) | 0.744 | 0.508–0.982 | 1.00 | 1.00 |
+| Bin (Bodis 2009) | 0.675 | 0.458–0.816 | 1.00 | 1.00 |
+| Bin + 45° | 0.672 | 0.451–0.794 | 1.00 | 1.00 |
+| ECHOS (Amezcua 2013; box bin, no lineshape) | 0.666 | 0.315–0.973 | 1.00 | 1.00 |
+| Quad-tree (Castillo 2013) | 0.413 | 0.208–0.564 | 1.00 | 1.00 |
+| Nearest neighbour (Pierens 2012) | 0.099 | 0.066–0.132 | 1.00 | 1.00 |
 
 \newpage
 
 **Table S9 (continued).** Held-out and retrieval operating metrics.
 
-| method | LOO error | rejection FPR | top-1 | MRR |
-| --- | :---: | :---: | :---: | :---: |
-| **STCC (default)** | 0.00 | 0.00 | 1.00 | 1.00 |
-| **Local Contrast (experimental)** | 0.00 | 0.00 | 1.00 | 1.00 |
+| method | LOO error | false-negative rate | rejection FPR | top-1 | MRR |
+| --- | :---: | :---: | :---: | :---: | :---: |
+| **Local Contrast (experimental)** | 0.000 | 0.00 | 0.00 | 1.00 | 1.00 |
+| **STCC (default)** | 0.000 | 0.00 | 0.00 | 1.00 | 1.00 |
+| Cosine, un-centred (STCC ablation) | 0.000 | 0.00 | 0.00 | 1.00 | 1.00 |
+| Bin (Bodis 2009) | 0.012 | 0.20 | 0.00 | 1.00 | 1.00 |
+| Bin + 45° | 0.012 | 0.20 | 0.00 | 1.00 | 1.00 |
+| ECHOS (Amezcua 2013; box bin, no lineshape) | 0.012 | 0.20 | 0.00 | 1.00 | 1.00 |
+| Quad-tree (Castillo 2013) | 0.000 | 0.00 | 0.00 | 1.00 | 1.00 |
+| Nearest neighbour (Pierens 2012) | 0.000 | 0.00 | 0.00 | 1.00 | 1.00 |
 
 **Retrieval (dereplication).** Cast as a library search — for each of the 10 spectra, rank the
 other 9 by similarity and ask whether the true same-compound partner is retrieved first — **every**
