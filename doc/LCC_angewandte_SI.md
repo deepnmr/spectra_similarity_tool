@@ -126,7 +126,7 @@ $$
 
 with linewidth $\ell$ and expected drift $d$ (defaults $\sigma_{F2} = 0.03$,
 $\sigma_{F1} = 0.30$ ppm for $^1$H–$^{15}$N). The 1-D kernel, with $s = \sigma/\Delta$ the width
-in pixels and radius $r = \lceil 3s \rceil$, is
+in pixels and radius $r = \max(1, \operatorname{round}(3s))$, is
 
 $$
 g_\sigma(m) \;=\; \frac{\exp\!\big(-m^{2}/2s^{2}\big)}
@@ -267,9 +267,11 @@ $$
 $$
 
 which is **smooth and monotone** in the drift — no bin-edge discontinuity. A physical titration
-drift ($\Delta_{^1\mathrm{H}} \sim 0.01$–$0.05$, $\Delta_{^{15}\mathrm{N}} \sim 0.2$–$0.8$ ppm) is
-a fraction of $\sigma$ and costs little; a random relocation ($\Delta \gg \sigma$) drives the
-factor toward $0$. The single knob $\sigma$ sets the tolerance scale (main-text Figure 1b).
+drift ($\Delta_{^1\mathrm{H}} \sim 0.01$–$0.05$, $\Delta_{^{15}\mathrm{N}} \sim 0.2$–$0.8$ ppm)
+spans roughly $0.3$–$2.7\,\sigma$ at the defaults: the lower end costs little (factor $\geq 0.9$ for
+$\Delta \leq 0.6\,\sigma$), while the largest perturbations are penalized substantially (factor
+$\approx 0.17$ at $\Delta_{^{15}\mathrm{N}} = 0.8$ ppm), and a random relocation ($\Delta \gg \sigma$)
+drives the factor toward $0$. The single knob $\sigma$ sets the tolerance scale (main-text Figure 1b).
 
 ![**Figure S6.** Graded vs brittle response to a shift. **(a)** The bin method's edges are hard: as
 a peak drifts, a small displacement splits its mass across a bin boundary. **(b)** Similarity
@@ -340,7 +342,8 @@ un-centred cosine ablation (§S10). Select the experimental candidate with
 apply. Negatives are handled by the baseline mode (`clip` default; use `abs` for
 multiplicity-edited HSQC — §S1). The CLI default remains `--method lcc`. For the
 $^1$H–$^{13}$C benchmark the blur widths are scaled to that regime
-($\sigma_{^1\mathrm{H}} = 0.05$, $\sigma_{^{13}\mathrm{C}} = 0.5$ ppm).
+($\sigma_{^1\mathrm{H}} = 0.05$, $\sigma_{^{13}\mathrm{C}} = 0.5$ ppm) and rendered on a
+$0.02 \times 0.2$ ppm grid (2.5 px per $\sigma$ on each axis).
 
 ![**Figure S10.** The render grid is a discretization, not a tuning parameter. A fixed
 same-compound toy pair is scored while the render pixel size is swept: the STCC score is **flat**
@@ -463,7 +466,7 @@ same-protein score of 0.82 versus worst decoy 0.41; Local Contrast has 0.66 vers
 ## S9 Benchmark 2 — sparse small-molecule $^1$H–$^{13}$C
 
 **Design.** Public HSQC peak lists from the simpleNMR example set [14] (EricHughesABC/simpleNMR). Six
-nominal compounds, each recorded **twice** (a variant pair — e.g. menthol in two solvents). One
+nominal compounds, each represented by **two** peak lists (a variant pair). One
 nominal pair, **olivetol**, was excluded: its two source files (`Olivetol.json` and
 `Olivetol_A.json`) are **byte-identical** (same MD5, identical peak lists), so it was a
 self-comparison scoring 1.00 for every method — an information-free positive that inflated
@@ -472,15 +475,13 @@ and asks each measure to score them above the **40 different-compound pairs**. `
 raises at load time on any same-pair that renders to an identical image, so a duplicate cannot
 silently re-enter. Peak lists are rasterized to a synthetic 2D **stick** spectrum, using
 $|$intensity$|$ so edited-HSQC CH$_2$ peaks are kept (§S1); each method then applies its own
-shift-tolerance processing. This avoids the former method-neutral pre-blur and the resulting double
-blur for STCC-family methods.
+shift-tolerance processing, so no method receives a pre-blurred input.
 Window $^1$H 0–10 $\times$ $^{13}$C 0–165 ppm; STCC blur $\sigma_{^1\mathrm{H}} = 0.05$,
 $\sigma_{^{13}\mathrm{C}} = 0.5$ ppm.
 
 **Table S5.** Aggregate scores, sparse small-molecule $^1$H–$^{13}$C benchmark (5 same-compound
 pairs, 40 different). All methods self-score exactly 1. The un-centred cosine is STCC without
-mean-centring (§S6b), included here as the ablation baseline (bug-fix: it is now a reproducible
-benchmark row, not an asserted number).
+mean-centring (§S6b), included here as the ablation baseline and computed by the same harness.
 
 | method | mean same | mean diff | separation | margin |
 | --- | :---: | :---: | :---: | :---: |
@@ -493,17 +494,19 @@ benchmark row, not an asserted number).
 | Cosine, un-centred (STCC ablation) | 0.747 | 0.002 | 0.744 | 0.373 |
 | **STCC (default)** | 0.746 | 0.002 | 0.745 | 0.374 |
 
-**Table S6.** Per-pair same-compound scores. Two pairs are genuinely shifted (menthol in two
-solvents; a rotenone re-measurement); on these the shift-tolerant tree/NN keep the same compound
-high while the position-sensitive bin/STCC penalize the shift. The catch is that tree/NN tolerate
+**Table S6.** Per-pair same-compound scores. Two pairs are hard: the two menthol peak lists differ
+by a near-uniform $^1$H offset (0.04–0.11 ppm, median 0.085 ppm; $^{13}$C offsets $\leq 0.35$ ppm), and the
+two rotenone peak lists share peak positions to 0.01 ppm but encode intensities on different scales
+(one with values of only $\pm0.1$ and $\pm1$). On these the tolerant tree/NN keep the same compound
+high while bin/STCC penalize the offset or the intensity mismatch. The catch is that tree/NN tolerate
 *everything*, which is why their different-compound scores (Table S5) are also high. The un-centred
 cosine column is identical to STCC to two decimals — in this sparse regime mean-centring changes
 nothing (see the ablation, §S10).
 
 | pair | Bin | Tree | NN | ECHOS | Cosine | STCC | Local Contrast |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| menthol (two solvents) | 0.734 | 0.967 | 0.988 | 0.064 | 0.421 | 0.421 | **0.467** |
-| rotenone (re-measured) | 0.323 | 0.839 | 1.000 | 0.389 | 0.389 | 0.388 | **0.727** |
+| menthol (1H offset) | 0.734 | 0.967 | 0.988 | 0.064 | 0.421 | 0.421 | **0.467** |
+| rotenone (intensity scale) | 0.323 | 0.839 | 1.000 | 0.389 | 0.389 | 0.388 | **0.727** |
 | santonin | 0.973 | 0.993 | 1.000 | 1.000 | 1.000 | 1.000 | 0.999 |
 | chartreusin | 0.813 | 0.852 | 0.999 | 0.883 | 0.930 | 0.930 | 0.932 |
 | indanone | 0.897 | 0.923 | 1.000 | 0.992 | 0.992 | 0.992 | 0.997 |
@@ -537,8 +540,9 @@ single-decoy benchmark (0.77 vs 0.75; Table S2) and exceeds it on the two-decoy 
 its discrimination from the centred correlation that ECHOS already computes; what the lineshape
 adds is the graded, monotone response to drift of §S6a (and Figure 1b), which keeps a titrating
 sample high, at the cost of a slightly higher decoy score. In the sparse $^1$H–$^{13}$C regime the
-same ablation goes the other way: without the lineshape, ECHOS collapses on the two genuinely
-shifted same-compound pairs (menthol 0.06, rotenone 0.39; Table S6), so its margin falls to 0.06
+same ablation goes the other way: without the lineshape, ECHOS collapses on the one genuinely
+shifted same-compound pair (menthol 0.06 vs STCC 0.42; the rotenone pair, which differs in intensity
+scale rather than position, scores 0.39 under both; Table S6), so its margin falls to 0.06
 against STCC's 0.37 (Table S5). The two ablations are therefore complementary — mean-centring
 carries the dense regime, the lineshape carries the sparse one — and STCC is the only measure in
 Table S5 that holds both.
@@ -550,8 +554,8 @@ when the grid is coarsened all the way to the bin method's own resolution ($0.10
 
 **Experimental Local Contrast.** On the expanded dense benchmark, the candidate increases
 separation/margin from STCC's 0.567/0.405 to 0.672/0.523. On the stick-input sparse benchmark it
-increases 0.745/0.374 to 0.820/0.434, driven especially by the shifted rotenone pair
-(0.388→0.727). These are composite results for square-root compression *together with* fixed-scale
+increases 0.745/0.374 to 0.820/0.434, driven especially by the rotenone pair (0.388→0.727),
+whose two peak lists differ in intensity encoding rather than in peak position. These are composite results for square-root compression *together with* fixed-scale
 local background subtraction; the present experiment does not assign the gain to either component
 alone. Its representative runtime is 1.34$\times$ STCC. The candidate remains experimental because
 the held-out operating metrics tie default STCC (§S13).
@@ -577,7 +581,7 @@ reimplementations run inside one common wide window; the original papers tune pe
 and parameters, so this is not a verdict on those methods as their authors deployed them — only on
 how they behave as drop-in global similarity scores. (iii) The between-compound contrast is strong
 (40 pairs) but the same-compound side is only 5 pairs, of which two (menthol, rotenone) are the
-genuinely-shifted, discriminating tests; a byte-identical sixth pair (olivetol) was excluded
+hard, discriminating tests (a $^1$H offset and an intensity-scale mismatch, respectively); a byte-identical sixth pair (olivetol) was excluded
 (§S9).
 
 ## S11 Relationship to the source methods
@@ -620,7 +624,8 @@ explicit errors.
 
 **Reproduction.** All benchmark harnesses are in the repository:
 
-- `python3.11 bench.py` — dense protein $^1$H–$^{15}$N benchmark (Table S2), writing
+- `python3.11 bench.py --prl3 DIR --oaa DIR` — dense protein $^1$H–$^{15}$N benchmark (Table S2),
+  printing the per-comparison table (or JSON with `--json`); the published run is recorded in
   `results/method_comparison.{csv,json}` and `results/lcc_comparison.png`.
 - `python3.11 bench_nhsqc.py` — expanded dense benchmark with two decoy proteins (Tables S3, S4;
   main-text Table 2), reading the `Nhsqc/` PRL3–olsalazine titration and OAA/EphB3 spectra and
@@ -637,12 +642,12 @@ explicit errors.
   `retrieval_13c.json`; `python3.11 results/make_schematic.py` — regenerates Figure 1;
   `python3.11 results/make_si_figs.py` — regenerates the ten SI method figures (S1–S10).
 
-**Test suite.** A 46-test suite (all passing) checks the properties proved in §S5 and the
+**Test suite.** A 46-test suite checks the properties proved in §S5 and the
 Local-Contrast contract: exact self-score, symmetry, $[0,1]$ range, monotonic drift response,
 global intensity-scale invariance, baseline/noise related-above-unrelated ordering, half-step grid
 invariance and explicit invalid-input errors. Existing regressions cover mean-centring, the `abs`
-baseline and the duplicate-pair guard. Run with `python3.11 -m pytest`
-(files under `tests/`: `test_hsqc_lcc.py`, `test_hsqc_methods.py`, `test_hsqc_similarity.py`,
+baseline and the duplicate-pair guard. Run with `python3.11 -m pytest`; on a public checkout 46 tests pass and the dense-data regression
+is skipped because it needs the non-public spectra (files under `tests/`: `test_hsqc_lcc.py`, `test_hsqc_methods.py`, `test_hsqc_similarity.py`,
 `test_bench_13c.py`, `test_bench_nhsqc.py`, `test_bench_retrieval.py`, `test_spectrum_similarity.py`).
 
 ## S13 Statistical strength: bootstrap CIs and a retrieval test
@@ -820,7 +825,7 @@ left to future work (main text).
     C. M. Szabo, C. A. Amezcua, J. B. Jordan, M. Wikström, *Enabling adoption of 2D-NMR
     for the higher order structure assessment of monoclonal antibody therapeutics*, mAbs **2019**,
     *11*, 94–105. doi:10.1080/19420862.2018.1544454.
-38. C. E. Hart, T. Kind, P. C. Dorrestein, D. Healey, D. Domingo-Fernández, *Weighting
+38. C. Engler Hart, T. Kind, P. C. Dorrestein, D. Healey, D. Domingo-Fernández, *Weighting
     low-intensity MS/MS ions and m/z frequency for spectral library annotation*, J. Am. Soc. Mass
     Spectrom. **2024**, *35*, 266–274. doi:10.1021/jasms.3c00353.
 39. C. A. Amezcua, C. M. Szabo, *Assessment of higher order structure comparability in therapeutic
